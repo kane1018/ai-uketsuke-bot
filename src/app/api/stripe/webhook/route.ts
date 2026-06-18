@@ -1,13 +1,28 @@
 import { type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStripe } from "@/lib/stripe";
+import {
+  StripeConfigurationError,
+  getStripe,
+  getStripeMode,
+  type StripeMode,
+} from "@/lib/stripe";
 import { getInvoiceSubscriptionId, syncStripeSubscription } from "@/lib/stripe-subscriptions";
 import { jsonError, jsonOk } from "@/lib/api";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  let stripeMode: StripeMode;
+  try {
+    stripeMode = getStripeMode();
+  } catch (err) {
+    if (err instanceof StripeConfigurationError) {
+      console.error("[stripe webhook] configuration error:", err.message);
+    }
+    return jsonError("Webhook設定が完了していません", 503);
+  }
+
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!signature) return jsonError("Stripe署名がありません", 400);
@@ -25,9 +40,16 @@ export async function POST(request: NextRequest) {
     return jsonError("Stripe署名を検証できません", 400);
   }
 
+  const eventMode: StripeMode = event.livemode ? "live" : "test";
+  if (eventMode !== stripeMode) {
+    console.warn(`[stripe webhook] event mode mismatch: expected ${stripeMode}`);
+    return jsonError("WebhookのStripeモードが一致しません", 400);
+  }
+
   const admin = createAdminClient();
   const { error: eventInsertError } = await admin.from("billing_events").insert({
     stripe_event_id: event.id,
+    stripe_mode: stripeMode,
     type: event.type,
     payload: event,
   });
@@ -51,21 +73,21 @@ export async function POST(request: NextRequest) {
             : session.subscription?.id;
         if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-          await syncStripeSubscription(subscription);
+          await syncStripeSubscription(subscription, stripeMode);
         }
         break;
       }
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        await syncStripeSubscription(event.data.object as Stripe.Subscription);
+        await syncStripeSubscription(event.data.object as Stripe.Subscription, stripeMode);
         break;
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
         const subscriptionId = getInvoiceSubscriptionId(event.data.object as Stripe.Invoice);
         if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-          await syncStripeSubscription(subscription);
+          await syncStripeSubscription(subscription, stripeMode);
         }
         break;
       }
@@ -74,7 +96,8 @@ export async function POST(request: NextRequest) {
     await admin
       .from("billing_events")
       .update({ processed_at: new Date().toISOString() })
-      .eq("stripe_event_id", event.id);
+      .eq("stripe_event_id", event.id)
+      .eq("stripe_mode", stripeMode);
     return jsonOk({ received: true });
   } catch (err) {
     console.error(`[stripe webhook] failed to process ${event.id}:`, err);
@@ -84,6 +107,7 @@ export async function POST(request: NextRequest) {
       .from("billing_events")
       .delete()
       .eq("stripe_event_id", event.id)
+      .eq("stripe_mode", stripeMode)
       .is("processed_at", null);
     if (releaseError) {
       console.error(`[stripe webhook] failed to release ${event.id}:`, releaseError);

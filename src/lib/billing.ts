@@ -8,10 +8,12 @@ import {
   type PlanId,
   type SubscriptionStatus,
 } from "@/lib/plans";
+import { getStripeMode, type StripeMode } from "@/lib/stripe";
 
 export interface SubscriptionRecord {
   id: string;
   user_id: string;
+  stripe_mode: StripeMode;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
@@ -35,12 +37,13 @@ function monthStartIso() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
-export async function getSubscription(userId: string) {
+export async function getSubscription(userId: string, stripeMode = getStripeMode()) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("subscriptions")
     .select("*")
     .eq("user_id", userId)
+    .eq("stripe_mode", stripeMode)
     .maybeSingle();
 
   if (error) throw new Error(`Failed to load subscription: ${error.message}`);

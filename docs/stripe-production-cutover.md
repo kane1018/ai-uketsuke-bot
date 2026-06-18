@@ -6,10 +6,11 @@
 ## モードを混在させない
 
 StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscription IDはテストモードと本番モードで別物です。
-切り替えるときは、次の6項目を同じモードへまとめて変更してから再デプロイします。
+切り替えるときは、次の7項目を同じモードへまとめて変更してから再デプロイします。
 
 | Vercel環境変数 | テスト環境 | 本番環境 |
 | --- | --- | --- |
+| `STRIPE_MODE` | `test` | `live` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` | `pk_live_...` |
 | `STRIPE_SECRET_KEY` | `sk_test_...` | `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
@@ -17,7 +18,19 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 | `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1TjYh9Foat2NfwYmJdkeTKRE` |
 | `STRIPE_PRICE_PRO` | テストPrice ID | `price_1TjYiXFoat2NfwYmEGfrWsMy` |
 
-テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもモードをまたいで利用できません。
+テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもモードをまたいで利用できません。アプリは`STRIPE_MODE`とSecret keyのprefix、およびWebhook/Subscriptionの`livemode`を照合し、不一致を拒否します。
+
+## DBとアプリのtest/live分離
+
+[`supabase/migrations/202606180001_separate_stripe_modes.sql`](../supabase/migrations/202606180001_separate_stripe_modes.sql)を適用すると、`subscriptions`と`billing_events`に`stripe_mode`が追加されます。
+
+- 既存行は削除せず、すべて`test`としてバックフィルする
+- 同一ユーザーがtest/liveそれぞれ1件のsubscriptionを保持できる
+- Customer ID、Subscription ID、Webhook event IDの一意性をモードごとに管理する
+- RLS設定は変更しない
+- Billing画面、Checkout、Portal、Webhook、プラン上限制御は現在の`STRIPE_MODE`だけを参照する
+
+liveへ切り替えた直後、live subscriptionがまだないユーザーは無料プランとして表示されます。test subscriptionは検証証跡として残りますが、liveモードから参照されません。live Checkoutを完了すると、同じユーザーのlive用Customer/subscription行が別に作成されます。
 
 ## テストsubscriptionの扱い
 
@@ -27,12 +40,7 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 - 実際に終了または即時キャンセルした場合は、`customer.subscription.updated`または`customer.subscription.deleted`により`status`が更新されることを確認する。
 - Stripe上のテストデータを削除しても、本番モードのStripeデータには影響しない。
 
-重要: 現在の`subscriptions`行にはテストモードの`stripe_customer_id`と`stripe_subscription_id`が保存されています。APIキーだけをliveへ変更すると、同じユーザーのCheckoutがテストCustomer IDをlive APIへ渡して失敗します。live切り替え前に、次のどちらかを実装・実施してください。
-
-1. 推奨: `subscriptions`をStripe mode（test/live）で分離し、モードごとにCustomer/Subscriptionを保持する。
-2. 暫定: 対象テストユーザーの契約終了をWebhookで確認後、管理者承認のもとでテスト用Stripe IDをlive移行用に安全に切り離す。既存Bot・回答・ユーザーは削除しない。
-
-単なるPortalキャンセルではStripe ID自体は残るため、この問題は解消しません。
+重要: migration適用前にAPIキーだけをliveへ変更すると、同じユーザーのCheckoutがテストCustomer IDをlive APIへ渡して失敗します。必ずmigrationを先に適用し、既存行が`stripe_mode = 'test'`になったことを確認してから`STRIPE_MODE=live`へ切り替えてください。単なるPortalキャンセルではStripe ID自体は残るため、モード分離の代わりにはなりません。
 
 ## 本番切り替え手順
 
@@ -49,8 +57,8 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
      - `invoice.payment_succeeded`
      - `invoice.payment_failed`
 5. 本番Endpointで発行されたWebhook secretを安全に控える。
-6. テストCustomer ID混在問題が解消済みであることを確認する。
-7. Vercel Productionの6環境変数を、同一のliveモード値へまとめて変更する。
+6. test/live分離migrationが適用され、既存行が`test`として保持されていることを確認する。
+7. Vercel Productionの7環境変数を、`STRIPE_MODE=live`を含む同一のliveモード値へまとめて変更する。
 8. Productionを再デプロイする。
 9. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 10. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
@@ -84,4 +92,4 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 - 切り替え日時、担当者、Vercel deployment URLを記録する。
 - 使用したPrice IDとWebhook Endpoint IDを記録する（秘密値は記録しない）。
 - 初回liveイベントのStripe event IDとDB反映結果を記録する。
-- 問題時はlive/test値を混在させず、6項目を一組として扱う。
+- 問題時はlive/test値を混在させず、7項目を一組として扱う。

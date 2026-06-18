@@ -2,13 +2,25 @@ import "server-only";
 
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPlanFromPriceId, normalizeSubscriptionStatus } from "@/lib/stripe";
+import {
+  getPlanFromPriceId,
+  normalizeSubscriptionStatus,
+  type StripeMode,
+} from "@/lib/stripe";
 
 function idOf(value: string | { id: string } | null | undefined) {
   return typeof value === "string" ? value : value?.id ?? null;
 }
 
-export async function syncStripeSubscription(subscription: Stripe.Subscription) {
+export async function syncStripeSubscription(
+  subscription: Stripe.Subscription,
+  stripeMode: StripeMode
+) {
+  const subscriptionMode: StripeMode = subscription.livemode ? "live" : "test";
+  if (subscriptionMode !== stripeMode) {
+    throw new Error(`Stripe subscription mode mismatch: expected ${stripeMode}`);
+  }
+
   const admin = createAdminClient();
   const item = subscription.items.data[0];
   const priceId = item?.price.id ?? null;
@@ -21,6 +33,7 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
       .from("subscriptions")
       .select("user_id")
       .eq("stripe_customer_id", customerId)
+      .eq("stripe_mode", stripeMode)
       .maybeSingle();
     userId = data?.user_id ?? null;
   }
@@ -31,6 +44,7 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
   const { error } = await admin.from("subscriptions").upsert(
     {
       user_id: userId,
+      stripe_mode: stripeMode,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
@@ -44,7 +58,7 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
     },
-    { onConflict: "user_id" }
+    { onConflict: "user_id,stripe_mode" }
   );
 
   if (error) throw new Error(`Failed to save subscription: ${error.message}`);

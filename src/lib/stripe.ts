@@ -4,16 +4,33 @@ import Stripe from "stripe";
 import { PAID_PLANS, isPlanId, type PlanId, type SubscriptionStatus } from "@/lib/plans";
 
 let stripeClient: Stripe | null = null;
+let stripeClientMode: StripeMode | null = null;
 
 export class StripeConfigurationError extends Error {}
+
+export type StripeMode = "test" | "live";
+
+export function getStripeMode(): StripeMode {
+  const mode = (process.env.STRIPE_MODE || "test").trim().toLowerCase();
+  if (mode !== "test" && mode !== "live") {
+    throw new StripeConfigurationError("STRIPE_MODEはtestまたはliveを指定してください");
+  }
+  return mode;
+}
 
 export function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) throw new StripeConfigurationError("STRIPE_SECRET_KEYが設定されていません");
-  if (!stripeClient) {
+  const mode = getStripeMode();
+  const expectedPrefix = mode === "test" ? "sk_test_" : "sk_live_";
+  if (!secretKey.startsWith(expectedPrefix)) {
+    throw new StripeConfigurationError(`STRIPE_SECRET_KEYとSTRIPE_MODE=${mode}が一致していません`);
+  }
+  if (!stripeClient || stripeClientMode !== mode) {
     stripeClient = new Stripe(secretKey, {
       appInfo: { name: "AI Reception Bot" },
     });
+    stripeClientMode = mode;
   }
   return stripeClient;
 }

@@ -1,7 +1,12 @@
 import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSubscription } from "@/lib/billing";
-import { StripeConfigurationError, getAppUrl, getStripe } from "@/lib/stripe";
+import {
+  StripeConfigurationError,
+  getAppUrl,
+  getStripe,
+  getStripeMode,
+} from "@/lib/stripe";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
@@ -12,7 +17,8 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) return jsonError("認証が必要です", 401);
 
-    const subscription = await getSubscription(user.id);
+    const stripeMode = getStripeMode();
+    const subscription = await getSubscription(user.id, stripeMode);
     if (!subscription?.stripe_customer_id) {
       return jsonError("請求情報がまだありません", 404);
     }

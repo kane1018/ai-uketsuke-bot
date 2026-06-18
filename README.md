@@ -120,6 +120,10 @@ STRIPE_PRICE_PRO=price_1TjZ2CFoat2NfwYmSBgulHmr
 - `usage_events`: Bot作成・回答受信・AI生成の監査イベント
 - `billing_events`: Stripe Webhookの冪等処理ログ
 
+Stripeのtest/liveレコードを分離する場合は、その後に
+[`supabase/migrations/202606180001_separate_stripe_modes.sql`](supabase/migrations/202606180001_separate_stripe_modes.sql)
+を実行します。既存の課金行は削除せず`test`として保持し、同じユーザーがtest/liveそれぞれのCustomer・Subscriptionを持てる構成へ変更します。
+
 ---
 
 ## Stripe月額課金の設定
@@ -171,6 +175,7 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 Vercel Project > Settings > Environment Variablesに以下をProduction用として追加します。
 
 ```text
+STRIPE_MODE
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -179,7 +184,7 @@ STRIPE_PRICE_STANDARD
 STRIPE_PRICE_PRO
 ```
 
-テストモードと本番モードでKey / Price / Webhook secretはすべて別物です。本番切り替え時は6項目を同じモードで統一し、再デプロイしてください。
+`STRIPE_MODE`はテスト環境では`test`、本番環境では`live`にします。テストモードと本番モードでKey / Price / Webhook secretはすべて別物です。本番切り替え時は7項目を同じモードで統一し、再デプロイしてください。
 
 ### 6. 本番反映後の確認
 

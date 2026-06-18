@@ -8,6 +8,7 @@ import {
   getAppUrl,
   getPriceId,
   getStripe,
+  getStripeMode,
   normalizePlan,
 } from "@/lib/stripe";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
@@ -27,8 +28,9 @@ export async function POST(request: NextRequest) {
     if (!plan) return jsonError("プランが正しくありません", 422);
 
     const stripe = getStripe();
+    const stripeMode = getStripeMode();
     const priceId = getPriceId(plan);
-    const existing = await getSubscription(user.id);
+    const existing = await getSubscription(user.id, stripeMode);
 
     if (
       existing?.stripe_subscription_id &&
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
-        metadata: { user_id: user.id },
+        metadata: { user_id: user.id, stripe_mode: stripeMode },
       });
       customerId = customer.id;
 
@@ -53,11 +55,12 @@ export async function POST(request: NextRequest) {
       const { error } = await admin.from("subscriptions").upsert(
         {
           user_id: user.id,
+          stripe_mode: stripeMode,
           stripe_customer_id: customerId,
           plan: "free",
           status: "none",
         },
-        { onConflict: "user_id" }
+        { onConflict: "user_id,stripe_mode" }
       );
       if (error) throw new Error(`Failed to save Stripe customer: ${error.message}`);
     }
@@ -70,8 +73,8 @@ export async function POST(request: NextRequest) {
       success_url: `${appUrl}/dashboard/billing?success=true`,
       cancel_url: `${appUrl}/pricing?canceled=true`,
       allow_promotion_codes: false,
-      metadata: { user_id: user.id, plan },
-      subscription_data: { metadata: { user_id: user.id, plan } },
+      metadata: { user_id: user.id, plan, stripe_mode: stripeMode },
+      subscription_data: { metadata: { user_id: user.id, plan, stripe_mode: stripeMode } },
     });
 
     if (!session.url) return jsonError("Checkout URLを作成できませんでした", 502);
