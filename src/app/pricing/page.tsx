@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getEffectivePlan } from "@/lib/billing";
 import { PLAN_ORDER, PLANS, type PlanId } from "@/lib/plans";
 import { PricingAction } from "@/components/PricingAction";
+import { LegalFooter } from "@/components/LegalFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,16 @@ export default async function PricingPage({
             );
           })}
         </div>
+        <p className="mx-auto mt-8 max-w-3xl text-center text-xs leading-6 text-gray-500">
+          有料プランへ申し込む前に、
+          <Link href="/terms" className="text-brand-700 underline">利用規約</Link>、
+          <Link href="/privacy" className="text-brand-700 underline">プライバシーポリシー</Link>、
+          <Link href="/legal" className="text-brand-700 underline">特定商取引法に基づく表記</Link>、
+          <Link href="/refund-policy" className="text-brand-700 underline">解約・返金ポリシー</Link>
+          をご確認ください。
+        </p>
       </main>
+      <LegalFooter />
     </div>
   );
 }

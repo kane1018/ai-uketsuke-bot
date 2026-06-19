@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { LegalFooter } from "@/components/LegalFooter";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function DashboardLayout({
         </nav>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
+      <LegalFooter />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PURPOSES, INDUSTRIES } from "@/lib/constants";
+import { LegalFooter } from "@/components/LegalFooter";
 
 export default function LandingPage() {
   return (
@@ -131,9 +132,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-100 py-8 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} AI受付Bot作成サービス
-      </footer>
+      <LegalFooter />
     </div>
   );
 }
