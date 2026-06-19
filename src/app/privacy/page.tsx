@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/LegalPageLayout";
+import { LEGAL_BUSINESS_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = { title: "プライバシーポリシー | AI受付Bot" };
 
@@ -68,7 +69,15 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>8. 問い合わせ先</h2>
-        <p className="mt-3">本番公開前に、個人情報に関する問い合わせ先メールアドレスを記載します。</p>
+        <p className="mt-3">
+          個人情報に関する問い合わせ先：
+          <span className="font-semibold text-amber-800">{LEGAL_BUSINESS_INFO.inquiryEmail}</span>
+          <br />
+          対応時間：
+          <span className="font-semibold text-amber-800">
+            {LEGAL_BUSINESS_INFO.inquiryResponseTime}
+          </span>
+        </p>
       </section>
       <section>
         <h2>9. 改定</h2>

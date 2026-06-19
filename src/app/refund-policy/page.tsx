@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/LegalPageLayout";
+import { LEGAL_BUSINESS_INFO } from "@/lib/legal-info";
 
 export const metadata: Metadata = { title: "解約・返金ポリシー | AI受付Bot" };
 
@@ -42,7 +43,15 @@ export default function RefundPolicyPage() {
       <section>
         <h2>6. 問い合わせ先</h2>
         <p className="mt-3">
-          本番公開前に、課金・解約・返金に関する問い合わせ先メールアドレスと標準的な対応期間を記載します。カード番号などの機密情報はメールに記載しないでください。
+          課金・解約・返金に関する問い合わせ先：
+          <span className="font-semibold text-amber-800">{LEGAL_BUSINESS_INFO.inquiryEmail}</span>
+          <br />
+          対応時間：
+          <span className="font-semibold text-amber-800">
+            {LEGAL_BUSINESS_INFO.inquiryResponseTime}
+          </span>
+          <br />
+          カード番号などの機密情報はメールに記載しないでください。
         </p>
       </section>
     </LegalPageLayout>
