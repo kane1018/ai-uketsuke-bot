@@ -40,13 +40,13 @@ export async function PUT(
     }));
 
     // One database transaction updates copy + replaces the full question set.
-    // If any insert fails, PostgreSQL rolls the whole function call back.
+    // Null means "preserve the existing copy" when an optional field was omitted.
     const { error } = await supabase.rpc("replace_bot_questions", {
       p_bot_id: id,
       p_questions: normalizedQuestions,
-      p_opening_message: opening_message ?? "",
-      p_completion_message: completion_message ?? "",
-      p_cta_message: cta_message ?? "",
+      p_opening_message: opening_message ?? null,
+      p_completion_message: completion_message ?? null,
+      p_cta_message: cta_message ?? null,
     });
     if (error) return jsonError("質問の保存に失敗しました", 400);
 
