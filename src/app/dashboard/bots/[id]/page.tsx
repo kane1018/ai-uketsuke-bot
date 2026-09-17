@@ -9,14 +9,15 @@ export const dynamic = "force-dynamic";
 export default async function BotOverviewPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
 
   const { data: bot } = await supabase
     .from("bots")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!bot) notFound();

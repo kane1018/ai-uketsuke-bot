@@ -6,6 +6,7 @@ import { sendResponseNotification } from "@/lib/email";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 import type { ResponseAnswer } from "@/lib/types";
 import { getBillingOverview, recordUsageEvent } from "@/lib/billing";
+import { validateResponseValue } from "@/lib/response-validation";
 
 export const maxDuration = 30;
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP: 20 submissions / 10 minutes.
     const ip = getClientIp(request.headers);
-    const rl = rateLimit(`submit:${ip}`, 20, 10 * 60_000);
+    const rl = await rateLimit(`submit:${ip}`, 20, 10 * 60_000);
     if (!rl.success) {
       return jsonError(
         "送信回数が上限に達しました。しばらくしてからお試しください。",
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     // and ignore any client-supplied junk.
     const { data: questions } = await admin
       .from("bot_questions")
-      .select("id, question_text, question_type, is_required")
+      .select("id, question_text, question_type, options, is_required")
       .eq("bot_id", bot.id)
       .order("sort_order", { ascending: true });
 
@@ -71,13 +72,11 @@ export async function POST(request: NextRequest) {
       );
       const value = submitted?.value ?? "";
 
-      // Required check (server-side).
-      const isEmpty = Array.isArray(value)
-        ? value.length === 0
-        : String(value).trim() === "";
-      if (q.is_required && isEmpty) {
-        return jsonError(`「${q.question_text}」は必須です`, 422);
-      }
+      const validationError = validateResponseValue(
+        { ...q, options: Array.isArray(q.options) ? q.options : [] },
+        value
+      );
+      if (validationError) return jsonError(validationError, 422);
 
       answers.push({
         question_id: q.id,

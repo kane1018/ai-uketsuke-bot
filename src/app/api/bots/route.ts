@@ -8,7 +8,7 @@ import { getBillingOverview, recordUsageEvent } from "@/lib/billing";
 // Create a new bot (draft). Requires auth.
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

@@ -11,15 +11,16 @@ export const dynamic = "force-dynamic";
 export default async function ResponseDetailPage({
   params,
 }: {
-  params: { id: string; rid: string };
+  params: Promise<{ id: string; rid: string }>;
 }) {
-  const supabase = createClient();
+  const { id, rid } = await params;
+  const supabase = await createClient();
 
   const { data: response } = await supabase
     .from("bot_responses")
     .select("*")
-    .eq("id", params.rid)
-    .eq("bot_id", params.id)
+    .eq("id", rid)
+    .eq("bot_id", id)
     .single();
 
   if (!response) notFound();
@@ -29,7 +30,7 @@ export default async function ResponseDetailPage({
   return (
     <div className="space-y-4">
       <Link
-        href={`/dashboard/bots/${params.id}/responses`}
+        href={`/dashboard/bots/${id}/responses`}
         className="text-sm text-gray-400 hover:text-gray-600"
       >
         ← 回答ログ一覧に戻る

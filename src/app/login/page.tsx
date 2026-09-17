@@ -6,11 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/validations";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { safeInternalPath } from "@/lib/navigation";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = safeInternalPath(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -63,6 +63,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  runtime: "nodejs",
   // Run on everything EXCEPT:
   //  - static assets (_next, images, favicon)
   //  - the public chat (/b/...) and iframe embed (/embed/...) routes

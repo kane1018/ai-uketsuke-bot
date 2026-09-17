@@ -17,7 +17,7 @@ const checkoutSchema = z.object({ plan: z.enum(["light", "standard", "pro"]) });
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

@@ -29,7 +29,7 @@
 
 ## 技術構成
 
-- **Next.js 14（App Router）** + **TypeScript**
+- **Next.js 15.5.25（App Router / Maintenance LTS）** + **TypeScript**
 - **Tailwind CSS**
 - **Supabase**（Auth / PostgreSQL、Row Level Security 有効）
 - **OpenAI API**（質問設計の生成のみ。`gpt-4o-mini` 既定）
@@ -42,8 +42,8 @@
 ## セットアップ手順
 
 ```bash
-# 1. 依存関係のインストール
-npm install
+# 1. lockfileどおりに依存関係をインストール
+npm ci
 
 # 2. 環境変数ファイルを作成して値を埋める
 cp .env.example .env.local
@@ -102,7 +102,7 @@ STRIPE_PRICE_PRO=price_1TjZ2CFoat2NfwYmSBgulHmr
 
 このSQL一発で以下が作成されます（再実行しても安全な構成）。
 
-- **テーブル**: `profiles` / `bots` / `bot_questions` / `bot_responses` / `ai_generation_logs`
+- **テーブル**: `profiles` / `bots` / `bot_questions` / `bot_responses` / `ai_generation_logs` / `rate_limit_buckets`
 - **enum**: `bot_status` / `response_status` / `question_type`
 - **index**: 各外部キー・`public_slug`・`created_at` 等
 - **trigger**:
@@ -110,7 +110,7 @@ STRIPE_PRICE_PRO=price_1TjZ2CFoat2NfwYmSBgulHmr
   - `auth.users` 追加時に `profiles` を自動作成（`handle_new_user`、SECURITY DEFINER）
 - **RLS ポリシー**（下記「セキュリティ設計」参照）
 
-実行後、Table Editor で5テーブルと「RLS enabled」表示を確認してください。
+実行後、Table Editor で6テーブルと「RLS enabled」表示を確認してください。
 
 課金機能を既存DBへ追加する場合は、続けて
 [`supabase/migrations/20260618_add_billing.sql`](supabase/migrations/20260618_add_billing.sql)
@@ -123,6 +123,10 @@ STRIPE_PRICE_PRO=price_1TjZ2CFoat2NfwYmSBgulHmr
 Stripeのtest/liveレコードを分離する場合は、その後に
 [`supabase/migrations/202606180001_separate_stripe_modes.sql`](supabase/migrations/202606180001_separate_stripe_modes.sql)
 を実行します。既存の課金行は削除せず`test`として保持し、同じユーザーがtest/liveそれぞれのCustomer・Subscriptionを持てる構成へ変更します。
+
+既存DBをこのバージョンへ更新する場合は、さらに
+[`supabase/migrations/202609170001_foundation_hardening.sql`](supabase/migrations/202609170001_foundation_hardening.sql)
+を**アプリのデプロイ前に必ず適用**してください。公開Botの匿名テーブル直読を閉じ、共有レート制限と質問の原子的保存RPCを追加します。
 
 ---
 
@@ -292,6 +296,7 @@ STRIPE_PRICE_PRO
 npm run dev        # 開発サーバー（http://localhost:3000）
 npm run build      # 本番ビルド
 npm run start      # 本番起動（build後）
+npm run test       # セキュリティ/入力検証の回帰テスト
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit による型チェック
 ```
@@ -312,7 +317,7 @@ npm run typecheck  # tsc --noEmit による型チェック
 3. **Supabase の Redirect URLs / Site URL** に本番URLを追加（前述）。
 4. **ランタイム**
    - API Route（`/api/*`）は Node.js サーバーレスで動作（service_role / OpenAI / Resend を使用）。`edge` 指定はしていません。
-   - `middleware.ts` は Edge で動作し、`@supabase/ssr` でセッションを更新します（Supabase公式パターン）。ビルド時に出る `process.version` に関する警告は、Edgeで実行されないコードパスへの参照で、動作に影響しません。
+   - `middleware.ts` は Node.js runtime で動作し、`@supabase/ssr` でセッションを更新します。Next.js 15.5の安定版Node.js Middlewareを使用しています。
 5. **`service_role` key はクライアントへ出ません**
    （`src/lib/supabase/admin.ts` はAPI Routeからのみ import。`NEXT_PUBLIC_` も付けません）。
 6. `npm run build` がローカルで通ることを確認してからデプロイしてください。
@@ -360,15 +365,15 @@ npm run typecheck  # tsc --noEmit による型チェック
 ## セキュリティ設計
 
 - **RLS 有効**。ユーザーは自分のBot・回答ログのみ閲覧/編集可能。
-- 公開チャットは **published のBotのみ** RLSで読取可能。`draft` / `archived` は公開URLでも **404**（存在も漏らさない）。
+- 公開Bot/質問には匿名SELECTポリシーを付与せず、公開画面のServer Componentが **service_roleで必要列だけ取得**します。`draft` / `archived` は公開URLでも **404**。
 - 回答送信はサーバーAPIが **service_role** で処理（公開状態確認・必須チェック・レート制限・通知）。
   **公開INSERTポリシーは作らず**、直接の書き込みを不可にしています。
 - OpenAI / service_role / Resend / Stripe Secret のキーは**サーバー専用**。クライアント非露出。
 - Stripe Webhookはraw bodyの署名を検証し、イベントIDで冪等化。
 - 入力は **Zod** で検証。メール本文は **HTMLエスケープ**（XSS対策）。
 - `public_slug` は `crypto.randomBytes(18)`（約144bit）で推測困難。
-- 簡易レート制限（回答: IP単位20回/10分、生成: ユーザー単位10回/分）。
-  ※ プロセス内メモリのため単一インスタンス向け。本番スケール時はRedis等へ差し替え推奨。
+- PostgreSQL共有レート制限（回答: IP単位20回/10分、生成: ユーザー単位10回/分）。Vercelの複数インスタンス間でも同じ上限を共有します。
+- 質問セットとチャット文言の保存はDB関数内の1トランザクションで置換し、途中失敗時はロールバックします。
 
 ---
 

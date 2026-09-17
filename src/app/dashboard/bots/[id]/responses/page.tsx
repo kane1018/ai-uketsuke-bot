@@ -13,14 +13,15 @@ export const dynamic = "force-dynamic";
 export default async function ResponsesPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
 
   const { data: bot } = await supabase
     .from("bots")
     .select("id, name")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!bot) notFound();
@@ -28,7 +29,7 @@ export default async function ResponsesPage({
   const { data: responses } = await supabase
     .from("bot_responses")
     .select("*")
-    .eq("bot_id", params.id)
+    .eq("bot_id", id)
     .order("created_at", { ascending: false });
 
   const list = (responses ?? []) as BotResponse[];
@@ -52,7 +53,7 @@ export default async function ResponsesPage({
             {list.map((r) => (
               <li key={r.id}>
                 <Link
-                  href={`/dashboard/bots/${params.id}/responses/${r.id}`}
+                  href={`/dashboard/bots/${id}/responses/${r.id}`}
                   className="card block p-3"
                 >
                   <div className="flex items-center justify-between">
@@ -93,7 +94,7 @@ export default async function ResponsesPage({
                   <tr key={r.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 align-top">
                       <Link
-                        href={`/dashboard/bots/${params.id}/responses/${r.id}`}
+                        href={`/dashboard/bots/${id}/responses/${r.id}`}
                         className="block"
                       >
                         {formatDateTime(r.created_at)}

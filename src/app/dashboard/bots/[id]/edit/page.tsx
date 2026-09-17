@@ -8,16 +8,17 @@ export const dynamic = "force-dynamic";
 export default async function EditPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
 
   const { data: bot } = await supabase
     .from("bots")
     .select(
       "id, name, opening_message, completion_message, cta_message"
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!bot) notFound();
@@ -25,7 +26,7 @@ export default async function EditPage({
   const { data: questions } = await supabase
     .from("bot_questions")
     .select("*")
-    .eq("bot_id", params.id)
+    .eq("bot_id", id)
     .order("sort_order", { ascending: true });
 
   return (

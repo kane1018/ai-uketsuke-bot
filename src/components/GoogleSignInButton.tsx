@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { safeInternalPath } from "@/lib/navigation";
 
 // Reusable "Continue with Google" button for the login & signup pages.
 // Uses Supabase Auth signInWithOAuth (PKCE). After Google authenticates, the
@@ -19,13 +20,14 @@ export function GoogleSignInButton({
 
   async function handleClick() {
     setError(null);
+    const safeNext = safeInternalPath(next);
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-          next
+          safeNext
         )}`,
         // Let the user pick which Google account to use.
         queryParams: { prompt: "select_account" },

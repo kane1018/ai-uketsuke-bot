@@ -17,9 +17,10 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: { success?: string };
+  searchParams: Promise<{ success?: string }>;
 }) {
-  const supabase = createClient();
+  const { success } = await searchParams;
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,7 +35,7 @@ export default async function BillingPage({
         <p className="mt-1 text-sm text-gray-500">現在のプランと今月の利用状況を確認できます。</p>
       </div>
 
-      {searchParams.success === "true" && (
+      {success === "true" && (
         <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           お申し込みを受け付けました。プラン反映まで数秒かかる場合があります。
         </div>

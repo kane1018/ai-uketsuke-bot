@@ -85,6 +85,30 @@ export default function NewBotWizard() {
         return;
       }
 
+      // Initial creation accepts the generated plan immediately. Regeneration in
+      // the editor remains preview-only until the user presses Save.
+      setProgress("生成した質問を保存しています...");
+      const plan = gen.plan;
+      const saveRes = await fetch(`/api/bots/${botId}/questions`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: plan.questions,
+          opening_message: plan.opening_message ?? "",
+          completion_message: plan.completion_message ?? "",
+          cta_message: plan.cta_message ?? "",
+        }),
+      });
+      const saved = await saveRes.json();
+      if (!saveRes.ok) {
+        router.push(
+          `/dashboard/bots/${botId}/edit?genError=${encodeURIComponent(
+            saved.error || "生成した質問の保存に失敗しました"
+          )}`
+        );
+        return;
+      }
+
       router.push(`/dashboard/bots/${botId}/edit?generated=1`);
     } catch (err) {
       setSubmitting(false);
