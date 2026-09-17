@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function PublishPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = createClient();
+  const { id } = await params;
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -22,7 +23,7 @@ export default async function PublishPage({
   const { data: bot } = await supabase
     .from("bots")
     .select("id, status, public_slug")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!bot) notFound();

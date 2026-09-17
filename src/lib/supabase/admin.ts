@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 // Service-role Supabase client. SERVER-ONLY. Bypasses RLS.

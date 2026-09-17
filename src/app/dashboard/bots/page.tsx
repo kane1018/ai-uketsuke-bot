@@ -7,7 +7,7 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function BotsListPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: bots } = await supabase
     .from("bots")

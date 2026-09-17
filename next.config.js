@@ -1,11 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Allow the /embed/[slug] route to be loaded inside an <iframe> on any site.
-  // Only the embed route relaxes framing; everything else keeps the default.
   async headers() {
+    const baseline = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=()",
+      },
+    ];
+
     return [
       {
+        source: "/:path*",
+        headers: baseline,
+      },
+      {
+        // The embed route is intentionally frameable by customer websites.
         source: "/embed/:path*",
         headers: [
           {

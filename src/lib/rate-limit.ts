@@ -1,13 +1,6 @@
-// Minimal in-memory rate limiter.
-//
-// NOTE: This is process-local and resets on redeploy. It's adequate for an MVP
-// running on a single instance, and prevents trivial abuse of the public
-// response-submission and AI-generation endpoints. For production scale, swap
-// this for a shared store (e.g. Upstash Redis) behind the same interface.
+import "server-only";
 
-type Bucket = { count: number; resetAt: number };
-
-const buckets = new Map<string, Bucket>();
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface RateLimitResult {
   success: boolean;
@@ -15,52 +8,36 @@ export interface RateLimitResult {
   resetAt: number;
 }
 
-/**
- * @param key      unique identifier (e.g. `submit:<ip>` or `generate:<userId>`)
- * @param limit    max requests per window
- * @param windowMs window length in milliseconds
- */
-export function rateLimit(
+export async function rateLimit(
   key: string,
   limit: number,
   windowMs: number
-): RateLimitResult {
-  const now = Date.now();
-  const existing = buckets.get(key);
+): Promise<RateLimitResult> {
+  const admin = createAdminClient();
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const { data, error } = await admin.rpc("consume_rate_limit", {
+    p_key: key,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  });
 
-  if (!existing || existing.resetAt < now) {
-    const resetAt = now + windowMs;
-    buckets.set(key, { count: 1, resetAt });
-    return { success: true, remaining: limit - 1, resetAt };
+  if (error) {
+    console.error("[rate-limit] shared limiter failed:", error.message);
+    // Fail closed on public/cost-bearing endpoints when the limiter is unavailable.
+    return { success: false, remaining: 0, resetAt: Date.now() + windowMs };
   }
 
-  if (existing.count >= limit) {
-    return { success: false, remaining: 0, resetAt: existing.resetAt };
-  }
-
-  existing.count += 1;
+  const row = Array.isArray(data) ? data[0] : data;
+  const resetAt = row?.reset_at ? new Date(row.reset_at).getTime() : Date.now() + windowMs;
   return {
-    success: true,
-    remaining: limit - existing.count,
-    resetAt: existing.resetAt,
+    success: Boolean(row?.allowed),
+    remaining: Number(row?.remaining ?? 0),
+    resetAt,
   };
 }
 
-// Best-effort client IP from request headers (Vercel / proxies).
 export function getClientIp(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return headers.get("x-real-ip") ?? "unknown";
-}
-
-// Periodically drop expired buckets to bound memory.
-if (typeof setInterval !== "undefined") {
-  const interval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, bucket] of buckets) {
-      if (bucket.resetAt < now) buckets.delete(key);
-    }
-  }, 60_000);
-  // Don't keep the event loop alive just for cleanup.
-  if (typeof interval.unref === "function") interval.unref();
 }

@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function PricingPage({
   searchParams,
 }: {
-  searchParams: { canceled?: string };
+  searchParams: Promise<{ canceled?: string }>;
 }) {
-  const supabase = createClient();
+  const { canceled } = await searchParams;
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -48,7 +49,7 @@ export default async function PricingPage({
           </p>
         </div>
 
-        {searchParams.canceled === "true" && (
+        {canceled === "true" && (
           <div className="mx-auto mt-6 max-w-xl rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             お申し込みはキャンセルされました。プランは変更されていません。
           </div>

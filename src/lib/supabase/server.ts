@@ -5,8 +5,8 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 // Server-side Supabase client bound to the request cookies.
 // Uses the anon key, so all queries are still subject to RLS.
-export function createClient() {
-  const cookieStore = cookies();
+export async function createClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

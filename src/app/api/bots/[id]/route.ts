@@ -15,10 +15,11 @@ const patchSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -31,7 +32,7 @@ export async function PATCH(
     const { data: bot, error: fetchError } = await supabase
       .from("bots")
       .select("id, user_id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError || !bot) return jsonError("Botが見つかりません", 404);
@@ -47,7 +48,7 @@ export async function PATCH(
     const { data: updated, error } = await supabase
       .from("bots")
       .update(update)
-      .eq("id", params.id)
+      .eq("id", id)
       .select("*")
       .single();
 
@@ -60,10 +61,11 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -72,7 +74,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("bots")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (error) return jsonError(error.message, 400);
     return jsonOk({ ok: true });

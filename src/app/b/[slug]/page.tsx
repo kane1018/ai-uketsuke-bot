@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ChatForm } from "@/components/ChatForm";
 import type { BotQuestion } from "@/lib/types";
 import { getEffectivePlan } from "@/lib/billing";
@@ -10,16 +10,17 @@ export const dynamic = "force-dynamic";
 export default async function PublicChatPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const supabase = createClient();
+  const { slug } = await params;
+  const supabase = createAdminClient();
 
   const { data: bot } = await supabase
     .from("bots")
     .select(
       "id, user_id, name, opening_message, completion_message, cta_message, public_slug, status"
     )
-    .eq("public_slug", params.slug)
+    .eq("public_slug", slug)
     .eq("status", "published")
     .single();
 

@@ -7,10 +7,11 @@ import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 // Replace the full question set for a bot, and optionally its chat copy.
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -24,43 +25,30 @@ export async function PUT(
     const { data: bot, error: botError } = await supabase
       .from("bots")
       .select("id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
     if (botError || !bot) return jsonError("Botが見つかりません", 404);
 
-    // Optionally update the chat copy.
-    const copyUpdate: Record<string, string> = {};
-    if (opening_message !== undefined) copyUpdate.opening_message = opening_message;
-    if (completion_message !== undefined)
-      copyUpdate.completion_message = completion_message;
-    if (cta_message !== undefined) copyUpdate.cta_message = cta_message;
-    if (Object.keys(copyUpdate).length > 0) {
-      await supabase.from("bots").update(copyUpdate).eq("id", params.id);
-    }
+    const normalizedQuestions = questions.map((q, i) => ({
+      question_text: q.question_text,
+      question_type: q.question_type,
+      options: questionTypeHasOptions(q.question_type)
+        ? q.options.filter((o) => o.trim().length > 0)
+        : [],
+      is_required: q.is_required,
+      sort_order: i + 1,
+    }));
 
-    // Replace all questions (delete + insert) for a clean reorder.
-    const { error: delError } = await supabase
-      .from("bot_questions")
-      .delete()
-      .eq("bot_id", params.id);
-    if (delError) return jsonError(delError.message, 400);
-
-    if (questions.length > 0) {
-      const rows = questions.map((q, i) => ({
-        bot_id: params.id,
-        question_text: q.question_text,
-        question_type: q.question_type,
-        options: questionTypeHasOptions(q.question_type)
-          ? q.options.filter((o) => o.trim().length > 0)
-          : [],
-        is_required: q.is_required,
-        sort_order: i + 1,
-      }));
-      const { error: insError } = await supabase
-        .from("bot_questions")
-        .insert(rows);
-      if (insError) return jsonError(insError.message, 400);
-    }
+    // One database transaction updates copy + replaces the full question set.
+    // If any insert fails, PostgreSQL rolls the whole function call back.
+    const { error } = await supabase.rpc("replace_bot_questions", {
+      p_bot_id: id,
+      p_questions: normalizedQuestions,
+      p_opening_message: opening_message ?? "",
+      p_completion_message: completion_message ?? "",
+      p_cta_message: cta_message ?? "",
+    });
+    if (error) return jsonError("質問の保存に失敗しました", 400);
 
     return jsonOk({ ok: true });
   } catch (err) {

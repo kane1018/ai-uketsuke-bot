@@ -6,10 +6,11 @@ import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 // Update a response's status (new / contacted / closed). Owner only via RLS.
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -21,7 +22,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("bot_responses")
       .update({ status })
-      .eq("id", params.id)
+      .eq("id", id)
       .select("id, status")
       .single();
 

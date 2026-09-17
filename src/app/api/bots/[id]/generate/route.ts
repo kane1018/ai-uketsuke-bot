@@ -10,10 +10,11 @@ export const maxDuration = 60;
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,7 +30,7 @@ export async function POST(
     }
 
     // Rate limit: 10 generations / minute / user.
-    const rl = rateLimit(`generate:${user.id}`, 10, 60_000);
+    const rl = await rateLimit(`generate:${user.id}`, 10, 60_000);
     if (!rl.success) {
       return jsonError(
         "リクエストが多すぎます。少し時間をおいてからお試しください。",
@@ -43,7 +44,7 @@ export async function POST(
       .select(
         "id, name, purpose, industry, company_name, service_description, intake_goal, final_cta"
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (botError || !bot) return jsonError("Botが見つかりません", 404);
@@ -88,35 +89,9 @@ export async function POST(
     const { plan } = result;
     const admin = createAdminClient();
 
-    // Replace existing questions with the freshly generated set.
-    await admin.from("bot_questions").delete().eq("bot_id", bot.id);
-
-    const rows = plan.questions.map((q, i) => ({
-      bot_id: bot.id,
-      question_text: q.question_text,
-      question_type: q.question_type,
-      options: q.options,
-      is_required: q.is_required,
-      sort_order: i + 1,
-    }));
-
-    const { error: insertError } = await admin
-      .from("bot_questions")
-      .insert(rows);
-    if (insertError) {
-      return jsonError("質問の保存に失敗しました", 500);
-    }
-
-    // Persist the generated copy onto the bot.
-    await admin
-      .from("bots")
-      .update({
-        name: bot.name || plan.bot_title,
-        opening_message: plan.opening_message,
-        completion_message: plan.completion_message,
-        cta_message: plan.cta_message,
-      })
-      .eq("id", bot.id);
+    // Generation is preview-only. The editor explicitly saves the accepted plan
+    // through the atomic questions endpoint, so existing content is never
+    // destroyed just because an AI regeneration was requested.
 
     // Log the successful generation.
     await admin.from("ai_generation_logs").insert({
