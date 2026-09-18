@@ -31,7 +31,7 @@ export function getStripe() {
   }
   if (!stripeClient || stripeClientMode !== mode) {
     stripeClient = new Stripe(secretKey, {
-      appInfo: { name: "AI Reception Bot" },
+      appInfo: { name: "Reception Bot" },
     });
     stripeClientMode = mode;
   }

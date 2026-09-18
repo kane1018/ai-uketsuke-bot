@@ -10,7 +10,7 @@ function getResend(): Resend | null {
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ||
-  "AI Chatbot Builder <onboarding@resend.dev>";
+  "Reception Bot <onboarding@resend.dev>";
 
 export interface NotificationInput {
   bot: Pick<Bot, "id" | "name" | "notification_email">;
@@ -81,12 +81,12 @@ function buildHtml(input: NotificationInput): string {
       </a>
     </p>
     <p style="font-size:12px;color:#6b7280;margin-top:28px;line-height:1.7;border-top:1px solid #e5e7eb;padding-top:16px;">
-      このメールは、AI受付bot に新しい回答が送信されたため自動でお送りしています。<br />
+      このメールは、受付Bot に新しい回答が送信されたため自動でお送りしています。<br />
       本メールは送信専用アドレスから配信しているため、ご返信いただいてもお答えできない場合があります。
       回答者の方へご連絡される際は、上記の回答者メールアドレス宛にお願いいたします。
     </p>
     <p style="font-size:12px;color:#9ca3af;margin-top:12px;">
-      AI受付bot / chatbot-support.com
+      受付Bot / chatbot-support.com
     </p>
   </div>`;
 }
@@ -117,11 +117,11 @@ function buildText(input: NotificationInput): string {
     `管理画面で確認する: ${adminLink}`,
     "",
     "──────────",
-    "このメールは、AI受付bot に新しい回答が送信されたため自動でお送りしています。",
+    "このメールは、受付Bot に新しい回答が送信されたため自動でお送りしています。",
     "本メールは送信専用アドレスから配信しているため、ご返信いただいてもお答えできない場合があります。",
     "回答者の方へご連絡される際は、上記の回答者メールアドレス宛にお願いいたします。",
     "",
-    "AI受付bot / chatbot-support.com"
+    "受付Bot / chatbot-support.com"
   );
   return lines.join("\n");
 }

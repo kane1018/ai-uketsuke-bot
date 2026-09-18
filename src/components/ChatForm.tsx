@@ -257,7 +257,7 @@ export function ChatForm({
           <p className="text-[11px] text-gray-400">オンライン</p>
         </div>
         {showBranding && (
-          <span className="ml-auto text-[10px] text-gray-400">Powered by AI受付Bot</span>
+          <span className="ml-auto text-[10px] text-gray-400">Powered by 受付Bot</span>
         )}
       </div>
 
@@ -296,7 +296,7 @@ export function ChatForm({
           <p className="mb-3 rounded-md bg-gray-50 px-3 py-2 text-[11px] leading-5 text-gray-500">
             入力内容は <span className="font-semibold text-gray-700">{recipientName}</span> に送信されます。
             送信先での利用目的・取扱いは、送信先の案内をご確認ください。
-            AI受付Botによる保存・処理については{" "}
+            受付Botによる保存・処理については{" "}
             <a
               href="/privacy"
               target="_blank"

@@ -78,17 +78,28 @@ export default async function BillingPage({
 
       <section>
         <h2 className="mb-3 font-semibold">今月の利用状況</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <UsageCard label="Bot数" used={usage.bots} limit={plan.botLimit} />
           <UsageCard label="月間回答数" used={usage.responses} limit={plan.monthlyResponseLimit} />
-          <UsageCard label="AI生成回数" used={usage.aiGenerations} limit={plan.monthlyAiGenerationLimit} />
         </div>
       </section>
     </div>
   );
 }
 
-function UsageCard({ label, used, limit }: { label: string; used: number; limit: number }) {
+function UsageCard({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+  if (limit === null) {
+    return (
+      <div className="card p-4">
+        <p className="text-sm text-gray-500">{label}</p>
+        <p className="mt-1 text-2xl font-bold">
+          {used.toLocaleString()}件 <span className="text-sm font-normal text-gray-400">/ 無制限</span>
+        </p>
+        <p className="mt-3 text-xs text-gray-500">有料プランでは月間回答数を制限しません。</p>
+      </div>
+    );
+  }
+
   const percent = Math.min(100, Math.round((used / limit) * 100));
   const reached = used >= limit;
   return (

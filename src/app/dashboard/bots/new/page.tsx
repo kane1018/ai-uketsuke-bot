@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PURPOSES, INDUSTRIES } from "@/lib/constants";
 import { botBasicInfoSchema } from "@/lib/validations";
+import { buildBotTemplate } from "@/lib/bot-templates";
 
 type Step = 1 | 2 | 3;
 
@@ -59,36 +60,10 @@ export default function NewBotWizard() {
       }
       const botId: string = created.bot.id;
 
-      // 2) Generate questions with AI.
-      setProgress("AIが質問項目を生成しています...");
-      const genRes = await fetch(`/api/bots/${botId}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const gen = await genRes.json();
-
-      // Even if generation fails, the bot exists — send the user to the editor.
-      if (!genRes.ok) {
-        if (gen.upgradeRequired) {
-          router.push(
-            `/dashboard/bots/${botId}/edit?genError=${encodeURIComponent(
-              gen.error || "生成に失敗しました"
-            )}&upgrade=1`
-          );
-          return;
-        }
-        router.push(
-          `/dashboard/bots/${botId}/edit?genError=${encodeURIComponent(
-            gen.error || "生成に失敗しました"
-          )}`
-        );
-        return;
-      }
-
-      // Initial creation accepts the generated plan immediately. Regeneration in
-      // the editor remains preview-only until the user presses Save.
-      setProgress("生成した質問を保存しています...");
-      const plan = gen.plan;
+      // 2) Build a deterministic template from the selected purpose/industry.
+      setProgress("受付テンプレートを準備しています...");
+      const plan = buildBotTemplate(parsed.data);
+      setProgress("質問項目を保存しています...");
       const saveRes = await fetch(`/api/bots/${botId}/questions`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -102,14 +77,14 @@ export default function NewBotWizard() {
       const saved = await saveRes.json();
       if (!saveRes.ok) {
         router.push(
-          `/dashboard/bots/${botId}/edit?genError=${encodeURIComponent(
-            saved.error || "生成した質問の保存に失敗しました"
+          `/dashboard/bots/${botId}/edit?setupError=${encodeURIComponent(
+            saved.error || "テンプレートの保存に失敗しました"
           )}`
         );
         return;
       }
 
-      router.push(`/dashboard/bots/${botId}/edit?generated=1`);
+      router.push(`/dashboard/bots/${botId}/edit?template=1`);
     } catch (err) {
       setSubmitting(false);
       setProgress("");
@@ -204,7 +179,7 @@ export default function NewBotWizard() {
         <section>
           <h1 className="text-lg font-bold">② 業種を選んでください</h1>
           <p className="mt-1 text-sm text-gray-500">
-            あなたの業種に合った質問をAIが作ります
+            あなたの業種に合った受付テンプレートを用意します
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {INDUSTRIES.map((i) => (
@@ -253,7 +228,7 @@ export default function NewBotWizard() {
         <section>
           <h1 className="text-lg font-bold">③ 基本情報を入力</h1>
           <p className="mt-1 text-sm text-gray-500">
-            入力内容をもとにAIが質問を生成します
+            入力内容をもとに受付テンプレートを整えます
           </p>
 
           <div className="mt-4 space-y-4">
@@ -330,7 +305,7 @@ export default function NewBotWizard() {
               onClick={handleCreate}
               disabled={submitting}
             >
-              {submitting ? progress || "作成中..." : "AIで質問を生成する"}
+              {submitting ? progress || "作成中..." : "テンプレートから作成する"}
             </button>
           </div>
 

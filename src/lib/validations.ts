@@ -70,33 +70,6 @@ export const questionsSaveSchema = z.object({
 });
 
 // ---------------------------------------------------------------------
-// AI generation request
-// ---------------------------------------------------------------------
-export const generateSchema = z.object({
-  bot_id: z.string().uuid(),
-});
-
-// ---------------------------------------------------------------------
-// AI output (what the model must return)
-// ---------------------------------------------------------------------
-export const generatedQuestionSchema = z.object({
-  question_text: z.string().min(1).max(500),
-  question_type: questionTypeSchema.catch("text"),
-  options: z.array(z.string()).default([]),
-  is_required: z.boolean().default(true),
-  sort_order: z.number().int().default(0),
-});
-
-export const generatedPlanSchema = z.object({
-  bot_title: z.string().default(""),
-  bot_description: z.string().default(""),
-  opening_message: z.string().default(""),
-  questions: z.array(generatedQuestionSchema).min(1).max(30),
-  completion_message: z.string().default(""),
-  cta_message: z.string().default(""),
-});
-
-// ---------------------------------------------------------------------
 // Public response submission
 // ---------------------------------------------------------------------
 export const publicAnswerSchema = z.object({

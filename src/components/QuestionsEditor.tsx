@@ -42,9 +42,8 @@ interface Props {
 function EditorInner(props: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const genError = searchParams.get("genError");
-  const justGenerated = searchParams.get("generated") === "1";
-  const initialUpgradeRequired = searchParams.get("upgrade") === "1";
+  const setupError = searchParams.get("setupError");
+  const justPrepared = searchParams.get("template") === "1";
 
   const [questions, setQuestions] = useState<DraftQuestion[]>(
     props.initialQuestions.map(toDraft)
@@ -54,12 +53,10 @@ function EditorInner(props: Props) {
   const [cta, setCta] = useState(props.initialCta);
 
   const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
-  } | null>(genError ? { type: "error", text: genError } : null);
-  const [upgradeRequired, setUpgradeRequired] = useState(initialUpgradeRequired);
+  } | null>(setupError ? { type: "error", text: setupError } : null);
 
   function patch(key: string, changes: Partial<DraftQuestion>) {
     setQuestions((qs) =>
@@ -172,58 +169,11 @@ function EditorInner(props: Props) {
     }
   }
 
-  async function handleRegenerate() {
-    if (
-      !confirm(
-        "AIで質問を作り直しますか？現在編集中の内容は上書きされます（保存するまでDBは変わりません）。"
-      )
-    )
-      return;
-    setRegenerating(true);
-    setMessage(null);
-    setUpgradeRequired(false);
-    try {
-      const res = await fetch(`/api/bots/${props.botId}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setUpgradeRequired(Boolean(data.upgradeRequired));
-        throw new Error(data.error || "生成に失敗しました");
-      }
-      const plan = data.plan;
-      setQuestions(
-        (plan.questions as BotQuestion[]).map((q) => ({
-          key: newKey(),
-          question_text: q.question_text,
-          question_type: q.question_type,
-          options: q.options ?? [],
-          is_required: q.is_required,
-        }))
-      );
-      setOpening(plan.opening_message ?? "");
-      setCompletion(plan.completion_message ?? "");
-      setCta(plan.cta_message ?? "");
-      setMessage({
-        type: "success",
-        text: "AIで再生成しました。内容を確認して保存してください。",
-      });
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "生成に失敗しました",
-      });
-    } finally {
-      setRegenerating(false);
-    }
-  }
-
   return (
     <div className="space-y-5">
-      {justGenerated && !genError && questions.length > 0 && (
+      {justPrepared && !setupError && questions.length > 0 && (
         <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          ✓ AIが質問を生成しました。内容を確認・編集して保存しましょう。
+          ✓ 受付テンプレートを準備しました。必要に応じて質問を編集してください。
         </div>
       )}
       {message && (
@@ -235,11 +185,6 @@ function EditorInner(props: Props) {
           }`}
         >
           {message.text}
-          {message.type === "error" && upgradeRequired && (
-            <Link href="/pricing" className="ml-2 font-semibold underline">
-              プランを確認
-            </Link>
-          )}
         </div>
       )}
 
@@ -280,21 +225,16 @@ function EditorInner(props: Props) {
       </details>
 
       {/* Questions */}
-      <div className="flex items-center justify-between">
+      <div>
         <h2 className="font-semibold">質問項目（{questions.length}）</h2>
-        <button
-          type="button"
-          onClick={handleRegenerate}
-          className="btn-secondary text-sm"
-          disabled={regenerating}
-        >
-          {regenerating ? "生成中..." : "🪄 AIで再生成"}
-        </button>
+        <p className="mt-1 text-xs text-gray-500">
+          テンプレートを土台に、質問の追加・削除・並べ替えができます。
+        </p>
       </div>
 
       {questions.length === 0 && (
         <div className="card px-4 py-10 text-center text-sm text-gray-500">
-          質問がありません。「質問を追加」またはAI再生成で作成できます。
+          質問がありません。「質問を追加」から受付項目を作成してください。
         </div>
       )}
 

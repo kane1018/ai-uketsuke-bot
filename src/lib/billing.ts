@@ -29,7 +29,6 @@ export interface SubscriptionRecord {
 export interface UsageSnapshot {
   bots: number;
   responses: number;
-  aiGenerations: number;
 }
 
 function monthStartIso() {
@@ -73,31 +72,21 @@ export async function getUsageSnapshot(userId: string): Promise<UsageSnapshot> {
   const admin = createAdminClient();
   const since = monthStartIso();
 
-  const [botsResult, responsesResult, generationsResult] = await Promise.all([
+  const [botsResult, responsesResult] = await Promise.all([
     admin.from("bots").select("id", { count: "exact", head: true }).eq("user_id", userId),
     admin
       .from("bot_responses")
       .select("id, bots!inner(user_id)", { count: "exact", head: true })
       .eq("bots.user_id", userId)
       .gte("created_at", since),
-    admin
-      .from("usage_events")
-      .select("amount")
-      .eq("user_id", userId)
-      .eq("event_type", "ai_generation")
-      .gte("created_at", since),
   ]);
 
-  const error = botsResult.error || responsesResult.error || generationsResult.error;
+  const error = botsResult.error || responsesResult.error;
   if (error) throw new Error(`Failed to load usage: ${error.message}`);
 
   return {
     bots: botsResult.count ?? 0,
     responses: responsesResult.count ?? 0,
-    aiGenerations: (generationsResult.data ?? []).reduce(
-      (sum, row) => sum + (row.amount ?? 0),
-      0
-    ),
   };
 }
 
@@ -111,7 +100,7 @@ export async function getBillingOverview(userId: string) {
 
 export async function recordUsageEvent(
   userId: string,
-  eventType: "bot_created" | "response_received" | "ai_generation",
+  eventType: "bot_created" | "response_received",
   metadata: Record<string, unknown> = {}
 ) {
   const admin = createAdminClient();
@@ -122,20 +111,4 @@ export async function recordUsageEvent(
     metadata,
   });
   if (error) console.warn("[billing] failed to record usage event:", error.message);
-}
-
-
-export async function consumeAiGenerationQuota(
-  userId: string,
-  limit: number,
-  botId: string
-) {
-  const admin = createAdminClient();
-  const { data, error } = await admin.rpc("consume_ai_generation_quota", {
-    p_user_id: userId,
-    p_limit: limit,
-    p_bot_id: botId,
-  });
-  if (error) throw new Error(`Failed to reserve AI generation quota: ${error.message}`);
-  return data === true;
 }

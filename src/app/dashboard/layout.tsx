@@ -22,7 +22,7 @@ export default async function DashboardLayout({
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="text-lg font-bold text-brand-700">
-            AI受付Bot
+            受付Bot
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-gray-500 sm:inline">

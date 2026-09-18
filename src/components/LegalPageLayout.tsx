@@ -15,7 +15,7 @@ export function LegalPageLayout({
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-lg font-bold text-brand-700">
-            AI受付Bot
+            受付Bot
           </Link>
           <Link href="/pricing" className="btn-ghost">
             料金プラン

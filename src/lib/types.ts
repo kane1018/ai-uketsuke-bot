@@ -1,4 +1,4 @@
-// Shared domain types for the AI Chatbot Builder.
+// Shared domain types for the reception-bot builder.
 
 export type BotStatus = "draft" | "published" | "archived";
 
@@ -70,22 +70,4 @@ export interface BotResponse {
   answers: ResponseAnswer[];
   status: ResponseStatus;
   created_at: string;
-}
-
-// Shape the AI must return (also see lib/validations.ts).
-export interface GeneratedQuestion {
-  question_text: string;
-  question_type: QuestionType;
-  options: string[];
-  is_required: boolean;
-  sort_order: number;
-}
-
-export interface GeneratedBotPlan {
-  bot_title: string;
-  bot_description: string;
-  opening_message: string;
-  questions: GeneratedQuestion[];
-  completion_message: string;
-  cta_message: string;
 }

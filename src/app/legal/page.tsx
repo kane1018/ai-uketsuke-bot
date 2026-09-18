@@ -5,7 +5,7 @@ import {
   hasPendingLegalBusinessInfo,
 } from "@/lib/legal-info";
 
-export const metadata: Metadata = { title: "特定商取引法に基づく表記 | AI受付Bot" };
+export const metadata: Metadata = { title: "特定商取引法に基づく表記 | 受付Bot" };
 
 export default function LegalPage() {
   const hasPendingInfo = hasPendingLegalBusinessInfo();

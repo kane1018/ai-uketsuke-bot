@@ -5,7 +5,7 @@ import {
   PRIVACY_PRIVATE_ADDRESS_DISCLOSURE,
 } from "@/lib/legal-info";
 
-export const metadata: Metadata = { title: "プライバシーポリシー | AI受付Bot" };
+export const metadata: Metadata = { title: "プライバシーポリシー | 受付Bot" };
 
 export default function PrivacyPage() {
   return (
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
         <h2>3. 利用目的</h2>
         <ul>
           <li>本人確認、アカウント管理、本サービスの提供</li>
-          <li>Botの生成・公開、回答の保存・Bot運営者への提供・通知、利用上限の管理</li>
+          <li>Botの作成・公開、回答の保存・Bot運営者への提供・通知、利用上限の管理</li>
           <li>料金請求、契約管理、解約・返金対応</li>
           <li>不正利用の防止、セキュリティ確保、障害対応</li>
           <li>サービスの品質改善、利用状況の分析</li>
@@ -87,7 +87,6 @@ export default function PrivacyPage() {
           <li>Supabase：認証、データベース、関連するバックエンド機能</li>
           <li>Stripe：決済、請求、Customer Portal</li>
           <li>Resend：メール通知</li>
-          <li>OpenAI API：質問・文章等のAI生成</li>
           <li>Vercel：アプリケーションのホスティング、配信、ログ管理</li>
         </ul>
         <p className="mt-3">
@@ -96,10 +95,6 @@ export default function PrivacyPage() {
           当該国・地域の個人情報保護制度等を把握したうえで必要な安全管理措置を講じます。
           具体的な国・地域および安全管理措置の概要について確認を希望する場合は、
           下記問い合わせ先へご連絡ください。
-        </p>
-        <p className="mt-3">
-          AI生成に不要な個人情報、要配慮個人情報、パスワードその他の秘密情報を
-          プロンプトや自由記述欄へ入力しないでください。
         </p>
       </section>
 
