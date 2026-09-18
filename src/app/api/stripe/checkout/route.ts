@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       custom_text: {
         submit: {
           message:
-            `${selectedPlan.name}プランは月額${selectedPlan.price.toLocaleString()}円、1か月ごとの自動更新です。初回は申込時、その後は各請求期間の開始時に決済します。次回更新日前までに請求管理画面から解約でき、解約手数料はありません。利用者都合による支払済み料金の日割り・返金は原則行いません。`,
+            `${selectedPlan.name}プランは月額${selectedPlan.price.toLocaleString()}円、1か月ごとの自動更新です。12か月継続した場合の支払総額の目安は${(selectedPlan.price * 12).toLocaleString()}円です。初回は申込時、その後は各請求期間の開始時に決済します。次回更新日前までに請求管理画面から解約でき、解約手数料はありません。利用者都合による支払済み料金の日割り・返金は原則行いません。`,
         },
       },
       metadata: { user_id: user.id, plan, stripe_mode: stripeMode },

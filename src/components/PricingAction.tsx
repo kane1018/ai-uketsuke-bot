@@ -106,6 +106,10 @@ export function PricingAction({
                 value="1か月。解約するまで1か月ごとに自動更新"
               />
               <ConfirmRow
+                label="12か月継続時の目安"
+                value={`${(selectedPlan.price * 12).toLocaleString()}円`}
+              />
+              <ConfirmRow
                 label="支払時期"
                 value="初回申込時、その後は各請求期間の開始時"
               />
