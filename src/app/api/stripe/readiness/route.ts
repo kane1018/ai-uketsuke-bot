@@ -7,7 +7,10 @@ import {
   getStripe,
   getStripeMode,
 } from "@/lib/stripe";
-import { ensureStripePortalConfiguration } from "@/lib/stripe-portal";
+import {
+  ensureStripePortalConfiguration,
+  isStripePortalConfigurationReady,
+} from "@/lib/stripe-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -83,15 +86,8 @@ export async function GET(request: NextRequest) {
         portalConfigurationId
       );
     portalConfigurationOk =
-      portal.active &&
-      portal.business_profile.privacy_policy_url ===
-        `${appUrl}/privacy` &&
-      portal.business_profile.terms_of_service_url ===
-        `${appUrl}/terms` &&
-      portal.features.payment_method_update.enabled &&
-      portal.features.invoice_history.enabled &&
-      portal.features.subscription_cancel.enabled &&
-      portal.features.subscription_cancel.mode === "at_period_end";
+      portal.livemode === (mode === "live") &&
+      isStripePortalConfigurationReady(portal, appUrl);
   } catch (error) {
     console.error("[stripe readiness] portal check failed:", error);
     return failed("portal_configuration", {
