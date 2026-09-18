@@ -31,16 +31,18 @@ export async function PATCH(
     // RLS ensures the user can only touch their own bot.
     const { data: bot, error: fetchError } = await supabase
       .from("bots")
-      .select("id, user_id, company_name")
+      .select("id, user_id, company_name, status")
       .eq("id", id)
       .single();
 
     if (fetchError || !bot) return jsonError("Botが見つかりません", 404);
 
-    if (status === "published") {
-      const effectiveCompanyName = (info?.company_name ?? bot.company_name ?? "").trim();
+    const effectiveStatus = status ?? bot.status;
+    const effectiveCompanyName = (info?.company_name ?? bot.company_name ?? "").trim();
+
+    if (effectiveStatus === "published") {
       if (!effectiveCompanyName) {
-        return jsonError("公開するには会社・事業者名を設定してください", 400);
+        return jsonError("公開中のBotには会社・事業者名が必要です", 400);
       }
 
       const { count: questionCount, error: questionError } = await supabase
@@ -49,7 +51,7 @@ export async function PATCH(
         .eq("bot_id", id);
       if (questionError) return jsonError("公開条件の確認に失敗しました", 400);
       if ((questionCount ?? 0) < 1) {
-        return jsonError("公開するには質問を1つ以上作成してください", 400);
+        return jsonError("公開中のBotには質問が1つ以上必要です", 400);
       }
     }
 
