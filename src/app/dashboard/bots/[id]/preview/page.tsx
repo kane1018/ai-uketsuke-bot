@@ -16,7 +16,7 @@ export default async function PreviewPage({
 
   const { data: bot } = await supabase
     .from("bots")
-    .select("id, name, opening_message, completion_message, cta_message")
+    .select("id, name, company_name, opening_message, completion_message, cta_message")
     .eq("id", id)
     .single();
 
@@ -58,6 +58,7 @@ export default async function PreviewPage({
               key={list.map((q) => q.id).join(",")}
               slug=""
               botName={bot.name}
+              operatorName={bot.company_name || bot.name}
               openingMessage={bot.opening_message ?? ""}
               completionMessage={bot.completion_message ?? ""}
               ctaMessage={bot.cta_message ?? ""}

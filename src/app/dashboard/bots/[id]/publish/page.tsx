@@ -22,7 +22,7 @@ export default async function PublishPage({
 
   const { data: bot } = await supabase
     .from("bots")
-    .select("id, status, public_slug")
+    .select("id, status, public_slug, company_name")
     .eq("id", id)
     .single();
 
@@ -35,7 +35,16 @@ export default async function PublishPage({
     .select("id", { count: "exact", head: true })
     .eq("bot_id", bot.id);
 
-  const canPublish = (questionCount ?? 0) > 0;
+  const hasQuestions = (questionCount ?? 0) > 0;
+  const hasOperatorName = Boolean(bot.company_name?.trim());
+  const canPublish = hasQuestions && hasOperatorName;
+  const publishBlockReason = !hasQuestions && !hasOperatorName
+    ? "公開するには、質問を1つ以上作成し、基本情報で会社・事業者名を設定してください。"
+    : !hasQuestions
+      ? "公開するには、質問を1つ以上作成してください。"
+      : !hasOperatorName
+        ? "公開するには、基本情報で会社・事業者名を設定してください。"
+        : undefined;
   const isPublished = bot.status === "published";
 
   const chatUrl = publicChatUrl(bot.public_slug);
@@ -48,6 +57,7 @@ export default async function PublishPage({
         botId={bot.id}
         status={bot.status as BotStatus}
         canPublish={canPublish}
+        publishBlockReason={publishBlockReason}
       />
 
       {/* Public URL */}

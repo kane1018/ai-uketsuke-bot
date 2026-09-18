@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSubscription } from "@/lib/billing";
+import { PLANS } from "@/lib/plans";
+import { hasPendingLegalBusinessInfo } from "@/lib/legal-info";
 import {
   StripeConfigurationError,
   getAppUrl,
@@ -29,7 +31,14 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     const stripeMode = getStripeMode();
+    if (stripeMode === "live" && hasPendingLegalBusinessInfo()) {
+      return jsonError(
+        "本番決済に必要な事業者情報が未設定です。管理者にお問い合わせください。",
+        503
+      );
+    }
     const priceId = getPriceId(plan);
+    const selectedPlan = PLANS[plan];
     const existing = await getSubscription(user.id, stripeMode);
 
     if (
@@ -73,8 +82,16 @@ export async function POST(request: NextRequest) {
       success_url: `${appUrl}/dashboard/billing?success=true`,
       cancel_url: `${appUrl}/pricing?canceled=true`,
       allow_promotion_codes: false,
+      custom_text: {
+        submit: {
+          message:
+            `${selectedPlan.name}プランは月額${selectedPlan.price.toLocaleString()}円、1か月ごとの自動更新です。初回は申込時、その後は各請求期間の開始時に決済します。次回更新日前までに請求管理画面から解約でき、解約手数料はありません。利用者都合による支払済み料金の日割り・返金は原則行いません。`,
+        },
+      },
       metadata: { user_id: user.id, plan, stripe_mode: stripeMode },
-      subscription_data: { metadata: { user_id: user.id, plan, stripe_mode: stripeMode } },
+      subscription_data: {
+        metadata: { user_id: user.id, plan, stripe_mode: stripeMode },
+      },
     });
 
     if (!session.url) return jsonError("Checkout URLを作成できませんでした", 502);

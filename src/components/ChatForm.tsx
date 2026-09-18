@@ -12,6 +12,7 @@ interface ChatMessage {
 export interface ChatFormProps {
   slug: string;
   botName: string;
+  operatorName?: string;
   openingMessage: string;
   completionMessage: string;
   ctaMessage: string;
@@ -27,6 +28,7 @@ const DEFAULT_COMPLETION = "ご回答ありがとうございました！";
 export function ChatForm({
   slug,
   botName,
+  operatorName,
   openingMessage,
   completionMessage,
   ctaMessage,
@@ -55,6 +57,7 @@ export function ChatForm({
   const startedRef = useRef(false);
 
   const currentQuestion: BotQuestion | undefined = sorted[currentIndex];
+  const recipientName = operatorName?.trim() || "このBotの運営者";
 
   // Seed the conversation with the opening message + first question.
   useEffect(() => {
@@ -290,6 +293,20 @@ export function ChatForm({
       {/* Input area */}
       {showInput && (
         <div className="border-t border-gray-200 bg-white p-3">
+          <p className="mb-3 rounded-md bg-gray-50 px-3 py-2 text-[11px] leading-5 text-gray-500">
+            入力内容は <span className="font-semibold text-gray-700">{recipientName}</span> に送信されます。
+            送信先での利用目的・取扱いは、送信先の案内をご確認ください。
+            AI受付Botによる保存・処理については{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-700 underline"
+            >
+              プライバシーポリシー
+            </a>
+            をご確認ください。
+          </p>
           {inputError && (
             <p className="mb-2 text-xs text-red-600">{inputError}</p>
           )}

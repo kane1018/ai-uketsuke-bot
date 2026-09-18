@@ -16,7 +16,7 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 | `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
 | `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1TjYf7Foat2NfwYmpRakEuXo` |
 | `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1TjYh9Foat2NfwYmJdkeTKRE` |
-| `STRIPE_PRICE_PRO` | テストPrice ID | `price_1TjYiXFoat2NfwYmEGfrWsMy` |
+| `STRIPE_PRICE_PRO` | テストPrice ID | `price_1TjYixFoat2NfwYmEGfrWsMy` |
 
 テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもモードをまたいで利用できません。アプリは`STRIPE_MODE`とSecret keyのprefix、およびWebhook/Subscriptionの`livemode`を照合し、不一致を拒否します。
 
@@ -50,8 +50,13 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - プレースホルダーを残さず、事業者本人または専門家の確認を完了する。
 2. Stripe Dashboard、Checkout、領収書、Customer Portalに表示する公開ビジネス名が、法務ページの事業者表示と整合していることを確認する。
 3. Stripe本番モードで3プランと上記Price IDの金額・通貨・月次課金を再確認する。
+   - 2026-09-18確認: ライト1,980円、スタンダード4,980円、プロ9,800円、すべてJPY・1か月周期でactive。
+   - Stripe Priceの `tax_behavior` は現時点で `unspecified`。アプリは追加税額を加算せずPriceのunit_amountを請求総額として表示・決済する構成。
 4. Stripe本番モードのCustomer Portalで、支払い方法変更、請求履歴、プラン変更、キャンセル条件を設定する。
+   - 2026-09-18確認: 支払い方法変更、請求履歴、期間終了時の解約は有効。解約時のprorationはnone。
+   - 未対応: Customer Portalの利用規約URL・プライバシーポリシーURL。法務ページ本番反映後に設定する。
 5. Stripe本番モードでWebhook Endpointを作成する。
+   - 2026-09-18確認時点では、AI受付Bot用のlive Webhook Endpointは存在しないため、本番課金開始前に必須。
    - URL: `https://ai-uketsuke-bot.vercel.app/api/stripe/webhook`
    - イベント:
      - `checkout.session.completed`
@@ -90,7 +95,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [ ] 法務ページに表示するメールアドレス
 - [ ] 個人情報・課金・解約・返金の問い合わせ先メールアドレス
 - [ ] 問い合わせ対応時間または標準回答期間
-- [ ] 販売価格の税込／税別表示
+- [ ] 表示価格が実際のStripe請求総額と一致すること
 - [ ] Stripe Checkout、領収書、Customer Portalに表示する公開ビジネス名
 - [ ] `LEGAL_PENDING_VALUE`（`【未確定】`）がProductionの法務ページに残っていないこと
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
