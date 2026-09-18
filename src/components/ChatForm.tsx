@@ -57,7 +57,7 @@ export function ChatForm({
   const startedRef = useRef(false);
 
   const currentQuestion: BotQuestion | undefined = sorted[currentIndex];
-  const recipientName = operatorName?.trim() || botName || "受付窓口";
+  const recipientName = operatorName?.trim() || "このBotの運営者";
 
   // Seed the conversation with the opening message + first question.
   useEffect(() => {
