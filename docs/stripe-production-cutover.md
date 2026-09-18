@@ -108,7 +108,11 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [x] 料金表示は`PLANS`のStripe対象プラン金額から生成し、別途税額を加算しない表示へ統一
 - [x] `LEGAL_PENDING_VALUE`（`【未確定】`）が`LEGAL_BUSINESS_INFO`に残っていない
 - [ ] 住所の請求時開示方式を含む特商法表示について、事業者本人または専門家が最終確認
-- [ ] Stripe Checkout、領収書、Customer Portalに表示する公開ビジネス名を最終確認
+- [x] Stripe Checkout上部の表示名はSession単位で「AI受付Bot」に上書き
+- [x] AI受付Botの3つのlive Productにsubscription用明細表記 `AI UKETSUKE BOT` を設定
+- [ ] Stripeの領収書・Customer Portal等で使われるアカウント共通のPublic business nameを最終確認
+  - Stripeアカウントは他サービスと共用しているため、CheckoutのSession単位表示名とは別に、領収書・Portal上のBusiness nameはアカウント共通となる。
+  - 他サービスへ影響するアカウント共通名の変更は自動実施しない。共通の法的事業者名へ統一するか、AI受付Bot専用Stripeアカウントへ分離するかを本番課金開始前に確定する。
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。
