@@ -47,6 +47,11 @@ export default async function PricingPage({
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
             まずは無料で試し、必要なBot数や回答数に合わせてアップグレードできます。
           </p>
+          <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-gray-600">
+            有料プランは1か月単位で、解約するまで1か月ごとに自動更新されます。
+            表示価格が実際の支払総額で、これに消費税等を別途加算しません。
+            次回更新日前までに請求管理画面から解約でき、解約手数料はありません。
+          </p>
         </div>
 
         {canceled === "true" && (
