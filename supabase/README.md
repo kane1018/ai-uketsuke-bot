@@ -15,6 +15,13 @@ from migrations alone.
 The SQL under `supabase/migration_archive/` preserves the old local files
 for audit only. Supabase CLI must never deploy files from that directory.
 
+`supabase/config.toml` is intentionally local-only and ignored by Git. A freshly
+initialized CLI config contains development defaults (for example a localhost
+Auth site URL) that must never be pushed to production. Do not run
+`supabase config push` from this repository. If hosted configuration must be
+changed, inspect the current remote value first and change only the intended
+setting through an explicitly scoped management action.
+
 ## Historical no-op migrations
 
 Several tracked production migrations temporarily enabled anonymous reads or
