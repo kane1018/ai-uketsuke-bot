@@ -56,8 +56,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 2026-09-18確認: 支払い方法変更、請求履歴、期間終了時の解約は有効。解約時のprorationはnone。
    - AI受付Bot専用Customer Portal設定を使用する。`STRIPE_PORTAL_CONFIGURATION_ID` が設定済みならその設定を利用し、未設定ならアプリが初回Portal利用時に専用設定を自動作成して再利用する。
    - 自動作成する専用設定には、利用規約URL `https://chatbot-support.com/terms`、プライバシーポリシーURL `https://chatbot-support.com/privacy`、支払方法変更、請求履歴、期間終了時解約を設定する。
-5. Stripe本番モードでWebhook Endpointを作成する。
-   - 2026-09-18確認時点では、AI受付Bot用のlive Webhook Endpointは存在しないため、本番課金開始前に必須。
+5. Stripe本番モードのWebhook Endpointを確認する。
    - URL: `https://chatbot-support.com/api/stripe/webhook`
    - 2026-09-18: AI受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuk3Foat2NfwYmoT7fdYsT`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。旧Endpoint `we_1UGuabFoat2NfwYm3xFYt7cN` は無効化済み。
    - イベント:
@@ -74,6 +73,8 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
+   - 2026-09-18現在、`STRIPE_MODE`、Webhook secret、3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
+   - 残るブロッカーは `STRIPE_SECRET_KEY`。必ずStandard keysのlive Secret key（`sk_live_...`）をVercelへ設定し、`/api/stripe/readiness` がHTTP 200 / `ready:true` になるまで本番課金を開始しない。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
@@ -82,24 +83,32 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 15. Customer Portalで契約内容、支払い方法、プラン変更、キャンセル、戻り先を確認する。
 16. Bot作成、AI生成、公開回答、回答ログ、メール通知をスモークテストする。
 
+## 課金状態とダウングレード時の運用
+
+- `past_due` はStripeの支払い再試行中として扱い、その間は現在の有料プラン権限を一時的に維持する。
+- Stripe側で `unpaid` または `canceled` になった時点で、アプリの有効プランは無料プランへ戻る。
+- ダウングレード後に既存Bot数が新プラン上限を超えても、既存Botを自動削除・自動停止しない。
+- Bot数が上限を超えている間は新しいBotの作成を拒否する。利用者は不要Botを削除するか、上位プランへ変更する。
+- iframe利用可否とロゴ表示は常に現在の有効プランへ追従する。既存Bot数を維持していても旧プランの付加機能を固定しない。
+- Billing画面では `past_due` とBot数超過を明示し、利用者が状態を把握できるようにする。
+
 ## 法務・表示チェックリスト
 
 実課金を開始する前に、専門家の確認を含めて次を公開・確定します。
 
 ### 正式事業者情報反映チェック
 
-正式情報は[`src/lib/legal-info.ts`](../src/lib/legal-info.ts)の`LEGAL_BUSINESS_INFO`へ集約します。ほかのページへ同じ情報を直接重複入力せず、次の未確定値を事業者本人が確定してください。
+正式情報は[`src/lib/legal-info.ts`](../src/lib/legal-info.ts)の`LEGAL_BUSINESS_INFO`へ集約します。実装済みの値と、公開前に外部確認が必要な項目を分けて管理します。
 
-- [ ] 事業者名
-- [ ] 運営責任者名
-- [ ] 所在地
-- [ ] 電話番号と、請求時開示方式を採用できるかの専門家確認
-- [ ] 法務ページに表示するメールアドレス
-- [ ] 個人情報・課金・解約・返金の問い合わせ先メールアドレス
-- [ ] 問い合わせ対応時間または標準回答期間
-- [ ] 表示価格が実際のStripe請求総額と一致すること
-- [ ] Stripe Checkout、領収書、Customer Portalに表示する公開ビジネス名
-- [ ] `LEGAL_PENDING_VALUE`（`【未確定】`）がProductionの法務ページに残っていないこと
+- [x] 事業者名・運営責任者名を反映
+- [x] 電話番号を反映
+- [x] 法務ページ表示用メールアドレスと問い合わせ先メールアドレスを反映
+- [x] 問い合わせ対応時間を反映
+- [x] 所在地は公開せず、請求時に遅滞なく電子メールで開示する案内を実装
+- [x] 料金表示は`PLANS`のStripe対象プラン金額から生成し、別途税額を加算しない表示へ統一
+- [x] `LEGAL_PENDING_VALUE`（`【未確定】`）が`LEGAL_BUSINESS_INFO`に残っていない
+- [ ] 住所の請求時開示方式を含む特商法表示について、事業者本人または専門家が最終確認
+- [ ] Stripe Checkout、領収書、Customer Portalに表示する公開ビジネス名を最終確認
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。
