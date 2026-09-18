@@ -17,6 +17,12 @@ const nextConfig = {
         headers: baseline,
       },
       {
+        // Protect application, auth, legal, and dashboard pages from clickjacking.
+        // /embed/* is intentionally excluded because customers embed those pages.
+        source: "/((?!embed(?:/|$)).*)",
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      {
         // The embed route is intentionally frameable by customer websites.
         source: "/embed/:path*",
         headers: [
