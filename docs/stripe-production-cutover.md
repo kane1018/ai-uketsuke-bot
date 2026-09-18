@@ -22,7 +22,7 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 | --- | --- | --- |
 | `STRIPE_MODE` | `test` | `live` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 任意（Stripe.js追加時） | 任意（現行Hosted Checkoutでは未使用） |
-| `STRIPE_SECRET_KEY` | `sk_test_...` | `sk_live_...` |
+| `STRIPE_SECRET_KEY` | `sk_test_...` / `rk_test_...` | `sk_live_...` / `rk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
 | `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1TjYf7Foat2NfwYmpRakEuXo` |
 | `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1TjYh9Foat2NfwYmJdkeTKRE` |
@@ -84,7 +84,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
    - 2026-09-18現在、`STRIPE_MODE`、Webhook secret、3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
-   - 残るブロッカーは `STRIPE_SECRET_KEY`。必ずStandard keysのlive Secret key（`sk_live_...`）をVercelへ設定し、`/api/stripe/readiness` がHTTP 200 / `ready:true` になるまで本番課金を開始しない。
+   - 残るブロッカーは `STRIPE_SECRET_KEY`。共有Stripeアカウントの既存Standard keyは他サービスへ影響する可能性があるためローテーションしない。AI受付Bot専用のlive restricted key（`rk_live_...`）を推奨し、必要権限だけを付与してVercelへ設定する。既存の専用Standard keyを安全に管理できる場合は `sk_live_...` も利用可能。いずれも `/api/stripe/readiness` がHTTP 200 / `ready:true` になるまで本番課金を開始しない。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
