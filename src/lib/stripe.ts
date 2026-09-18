@@ -22,9 +22,12 @@ export function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) throw new StripeConfigurationError("STRIPE_SECRET_KEYが設定されていません");
   const mode = getStripeMode();
-  const expectedPrefix = mode === "test" ? "sk_test_" : "sk_live_";
-  if (!secretKey.startsWith(expectedPrefix)) {
-    throw new StripeConfigurationError(`STRIPE_SECRET_KEYとSTRIPE_MODE=${mode}が一致していません`);
+  const allowedPrefixes =
+    mode === "test" ? ["sk_test_", "rk_test_"] : ["sk_live_", "rk_live_"];
+  if (!allowedPrefixes.some((prefix) => secretKey.startsWith(prefix))) {
+    throw new StripeConfigurationError(
+      `STRIPE_SECRET_KEYとSTRIPE_MODE=${mode}が一致していません`
+    );
   }
   if (!stripeClient || stripeClientMode !== mode) {
     stripeClient = new Stripe(secretKey, {
