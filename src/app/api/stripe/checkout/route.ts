@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSubscription } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
+import { hasPendingLegalBusinessInfo } from "@/lib/legal-info";
 import {
   StripeConfigurationError,
   getAppUrl,
@@ -30,6 +31,12 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     const stripeMode = getStripeMode();
+    if (stripeMode === "live" && hasPendingLegalBusinessInfo()) {
+      return jsonError(
+        "本番決済に必要な事業者情報が未設定です。管理者にお問い合わせください。",
+        503
+      );
+    }
     const priceId = getPriceId(plan);
     const selectedPlan = PLANS[plan];
     const existing = await getSubscription(user.id, stripeMode);
