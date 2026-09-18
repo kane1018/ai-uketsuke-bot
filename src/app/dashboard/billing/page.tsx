@@ -41,6 +41,23 @@ export default async function BillingPage({
         </div>
       )}
 
+      {subscription?.status === "past_due" && (
+        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          お支払いの再試行中です。現時点では現在のプランを継続利用できます。
+          Stripe側で未払いまたは解約状態になった場合は有料機能が停止するため、
+          請求管理から支払い方法をご確認ください。
+        </div>
+      )}
+
+      {usage.bots > plan.botLimit && (
+        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          現在{usage.bots.toLocaleString()}個のBotがあり、現在のプラン上限
+          {plan.botLimit.toLocaleString()}個を超えています。既存Botは削除・停止しませんが、
+          上限以下になるまで新しいBotは作成できません。iframe・ロゴ表示などの機能は
+          現在のプラン条件に従います。
+        </div>
+      )}
+
       <section className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
