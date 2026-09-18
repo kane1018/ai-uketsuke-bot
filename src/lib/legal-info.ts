@@ -17,9 +17,10 @@ export const LEGAL_BUSINESS_INFO = {
 } as const;
 
 export function hasPendingLegalBusinessInfo() {
-  return Object.values(LEGAL_BUSINESS_INFO).some(
-    (value) => value === LEGAL_PENDING_VALUE
-  );
+  return Object.values(LEGAL_BUSINESS_INFO).some((value) => {
+    const normalized = value.trim();
+    return normalized.length === 0 || normalized === LEGAL_PENDING_VALUE;
+  });
 }
 
 export type LegalDisclosureItem = {
