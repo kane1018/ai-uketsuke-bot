@@ -9,9 +9,10 @@
 - AI受付Botの3つのlive Priceは有効で、ライト1,980円、スタンダード4,980円、プロ9,800円、すべてJPY・月次。
 - 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
 - Supabaseにはtestモードの課金検証履歴のみ存在し、live subscription / live billing eventはまだない。
-- 本番 `/api/stripe/readiness` は `failureStage=stripe_secret_key` で停止中。Productionの有効な `sk_live_...` が認識されるまでlive課金を開始しない。
+- 本番 `/api/stripe/readiness` は2026-09-18にHTTP 200 / `ready:true` を確認済み。live restricted key、3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
+- Vercel Productionの `STRIPE_SECRET_KEY` にはAI受付Bot専用の `rk_live_...` を設定済み。共有Stripeアカウントの既存Standard live keyはローテーションしていないため、他サービスへの影響を避けている。
+- AI受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v1` を持つ設定を自動作成・再利用する。現行設定IDは `bpc_1UH3NdFoat2NfwYmuQLfvlIh`。
 - Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールはAI受付Bot専用ではない。Checkout Session上部は「AI受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
-- AI受付Bot専用Customer Portal設定はSecret keyが有効になった後、readiness/Portal処理が必要条件を満たす設定を自動探索し、存在しなければ作成する。
 
 ## モードを混在させない
 
@@ -83,8 +84,8 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
-   - 2026-09-18現在、`STRIPE_MODE`、Webhook secret、3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
-   - 残るブロッカーは `STRIPE_SECRET_KEY`。共有Stripeアカウントの既存Standard keyは他サービスへ影響する可能性があるためローテーションしない。AI受付Bot専用のlive restricted key（`rk_live_...`）を推奨し、必要権限だけを付与してVercelへ設定する。既存の専用Standard keyを安全に管理できる場合は `sk_live_...` も利用可能。いずれも `/api/stripe/readiness` がHTTP 200 / `ready:true` になるまで本番課金を開始しない。
+   - 2026-09-18現在、`STRIPE_MODE`、AI受付Bot専用live restricted key（`rk_live_...`）、Webhook secret、3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
+   - `/api/stripe/readiness` はHTTP 200 / `ready:true` を確認済み。Stripe構成上の技術ブロッカーは解消済み。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
