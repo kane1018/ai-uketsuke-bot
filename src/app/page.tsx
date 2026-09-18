@@ -1,8 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PURPOSES, INDUSTRIES } from "@/lib/constants";
 import { LegalFooter } from "@/components/LegalFooter";
 
-export default function LandingPage() {
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  const { code } = await searchParams;
+  if (code) {
+    redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=%2Freset-password`);
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
