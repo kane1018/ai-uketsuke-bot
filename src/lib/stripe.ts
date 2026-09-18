@@ -19,7 +19,7 @@ export function getStripeMode(): StripeMode {
 }
 
 export function getStripe() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) throw new StripeConfigurationError("STRIPE_SECRET_KEYが設定されていません");
   const mode = getStripeMode();
   const expectedPrefix = mode === "test" ? "sk_test_" : "sk_live_";
