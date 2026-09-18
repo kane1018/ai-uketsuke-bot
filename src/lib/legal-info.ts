@@ -11,8 +11,8 @@ export const LEGAL_BUSINESS_INFO = {
   representativeName: "直井 寛水",
   address: LEGAL_PENDING_VALUE,
   phoneNumber: "080-3366-1814",
-  emailAddress: LEGAL_PENDING_VALUE,
-  inquiryEmail: LEGAL_PENDING_VALUE,
+  emailAddress: "info@chatbot-support.com",
+  inquiryEmail: "support@chatbot-support.com",
   inquiryResponseTime: "平日10:00〜18:00",
 } as const;
 
