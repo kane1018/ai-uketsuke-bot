@@ -81,6 +81,12 @@ export default async function PricingPage({
                   {plan.price.toLocaleString()}円
                   <span className="text-sm font-normal text-gray-500">/月</span>
                 </p>
+                {plan.price > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    12か月継続した場合の支払総額の目安：
+                    {(plan.price * 12).toLocaleString()}円
+                  </p>
+                )}
                 <dl className="mt-5 space-y-2 text-sm">
                   <Limit label="Bot数" value={`${plan.botLimit}個`} />
                   <Limit label="月間回答数" value={`${plan.monthlyResponseLimit.toLocaleString()}件`} />
