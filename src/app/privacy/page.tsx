@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/LegalPageLayout";
-import { LEGAL_BUSINESS_INFO } from "@/lib/legal-info";
+import {
+  LEGAL_BUSINESS_INFO,
+  PRIVACY_PRIVATE_ADDRESS_DISCLOSURE,
+} from "@/lib/legal-info";
 
 export const metadata: Metadata = { title: "プライバシーポリシー | AI受付Bot" };
 
@@ -19,7 +22,9 @@ export default function PrivacyPage() {
           </div>
           <div>
             <dt className="font-semibold">所在地</dt>
-            <dd className="font-semibold text-amber-800">{LEGAL_BUSINESS_INFO.address}</dd>
+            <dd className="font-semibold text-amber-800">
+              {PRIVACY_PRIVATE_ADDRESS_DISCLOSURE}
+            </dd>
           </div>
           <div>
             <dt className="font-semibold">代表者・運営責任者</dt>

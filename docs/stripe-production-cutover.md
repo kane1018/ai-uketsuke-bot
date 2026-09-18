@@ -3,6 +3,16 @@
 この文書は、テストモードで検証済みの月額課金をStripe本番モードへ切り替えるための手順です。
 秘密値はリポジトリ、Issue、チャット、スクリーンショットへ貼り付けず、StripeとVercelの管理画面内だけで扱います。
 
+## 2026-09-18 現在の本番状態
+
+- Stripeアカウントは本人確認済みで、カード決済・入金とも有効。追加の必須確認事項はない。
+- AI受付Botの3つのlive Priceは有効で、ライト1,980円、スタンダード4,980円、プロ9,800円、すべてJPY・月次。
+- 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
+- Supabaseにはtestモードの課金検証履歴のみ存在し、live subscription / live billing eventはまだない。
+- 本番 `/api/stripe/readiness` は `failureStage=stripe_secret_key` で停止中。Productionの有効な `sk_live_...` が認識されるまでlive課金を開始しない。
+- Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールはAI受付Bot専用ではない。Checkout Session上部は「AI受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
+- AI受付Bot専用Customer Portal設定はSecret keyが有効になった後、readiness/Portal処理が必要条件を満たす設定を自動探索し、存在しなければ作成する。
+
 ## モードを混在させない
 
 StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscription IDはテストモードと本番モードで別物です。
