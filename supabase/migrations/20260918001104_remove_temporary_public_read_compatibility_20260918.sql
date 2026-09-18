@@ -1,0 +1,2 @@
+-- Historical cleanup. Intentionally a no-op on replay because the replay baseline
+-- never restores the temporary anonymous public-read policies.
