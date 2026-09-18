@@ -12,6 +12,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = safeInternalPath(searchParams.get("redirect"));
+  const passwordReset = searchParams.get("passwordReset") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +60,12 @@ function LoginForm() {
             アカウントにログインします
           </p>
 
+          {passwordReset && (
+            <div className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+              パスワードを更新しました。新しいパスワードでログインしてください。
+            </div>
+          )}
+
           {error && (
             <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -93,6 +100,11 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-sm font-medium text-brand-600">
+                パスワードを忘れた方
+              </Link>
             </div>
             <button
               type="submit"
