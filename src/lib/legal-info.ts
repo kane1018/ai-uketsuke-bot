@@ -1,6 +1,8 @@
 import { PLANS } from "@/lib/plans";
 
 export const LEGAL_PENDING_VALUE = "【未確定】本番決済開始前に入力";
+export const LEGAL_PRIVATE_ADDRESS_DISCLOSURE =
+  "請求により遅滞なく電子メールで開示します。住所の開示を希望する場合は support@chatbot-support.com へご連絡ください。申込みの意思決定前に十分な時間的余裕をもって提供します。";
 
 // Replace only the values in this object after the business owner has
 // confirmed them. Do not infer personal or business information from other
@@ -9,7 +11,10 @@ export const LEGAL_PENDING_VALUE = "【未確定】本番決済開始前に入�
 export const LEGAL_BUSINESS_INFO = {
   businessName: "直井寛水",
   representativeName: "直井 寛水",
-  address: LEGAL_PENDING_VALUE,
+  // Full street address is intentionally not published. This site uses the
+  // disclosure-on-request route permitted for mail-order advertising, and the
+  // operator must be able to provide the complete address without delay.
+  address: LEGAL_PRIVATE_ADDRESS_DISCLOSURE,
   phoneNumber: "080-3366-1814",
   emailAddress: "info@chatbot-support.com",
   inquiryEmail: "support@chatbot-support.com",
