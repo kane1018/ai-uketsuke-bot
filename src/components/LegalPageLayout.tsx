@@ -26,13 +26,15 @@ export function LegalPageLayout({
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
           <p className="mt-3 text-sm leading-7 text-gray-600">{description}</p>
-          <p className="mt-2 text-xs text-gray-400">制定日：2026年6月19日</p>
+          <p className="mt-2 text-xs text-gray-400">
+            制定日：2026年6月19日 / 最終改定日：2026年9月18日
+          </p>
         </div>
         <article className="card space-y-8 p-6 leading-7 sm:p-10 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-900 [&_li]:ml-5 [&_li]:list-disc [&_p]:text-sm [&_p]:text-gray-700 [&_ul]:mt-3 [&_ul]:space-y-1 [&_ul]:text-sm [&_ul]:text-gray-700">
           {children}
         </article>
         <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900">
-          本ページはSaaS公開前のたたき台であり、法的助言ではありません。事業内容や法令の変更に応じて見直し、本番で実課金を開始する前に事業者本人または専門家が確認してください。
+          本ページは法令・サービス内容の変更に応じて適宜見直します。個別の事情に応じた法的判断が必要な場合は、弁護士その他の専門家へご相談ください。
         </p>
       </main>
       <LegalFooter />
