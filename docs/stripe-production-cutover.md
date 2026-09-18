@@ -9,9 +9,9 @@
 - 受付Botの3つのlive Priceは有効で、ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・月次。
 - 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
 - Supabaseにはtestモードの課金検証履歴のみ存在し、live subscription / live billing eventはまだない。
-- 本番 `/api/stripe/readiness` は2026-09-18にHTTP 200 / `ready:true` を確認済み。live restricted key、3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
+- 本番 `/api/stripe/readiness` は2026-09-19にHTTP 200 / `ready:true` を再確認済み。live restricted key、新料金の3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
 - Vercel Productionの `STRIPE_SECRET_KEY` には受付Bot専用の `rk_live_...` を設定済み。共有Stripeアカウントの既存Standard live keyはローテーションしていないため、他サービスへの影響を避けている。
-- 受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v2` を持つ設定を自動作成・再利用し、新料金の3 Priceだけをプラン変更先として許可する。
+- 受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v2` を持つ設定を自動作成・再利用し、新料金の3 Priceだけをプラン変更先として許可する。2026-09-19に `bpc_1UHAp6Foat2NfwYmbP1lEZux` の作成とreadiness PASSを確認済み。
 - Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールは受付Bot専用ではない。Checkout Session上部は「受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
 
 ## モードを混在させない
@@ -61,7 +61,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - プレースホルダーを残さず、事業者本人または専門家の確認を完了する。
 2. Stripe Dashboard、Checkout、領収書、Customer Portalに表示する公開ビジネス名が、法務ページの事業者表示と整合していることを確認する。
 3. Stripe本番モードで3プランと上記Price IDの金額・通貨・月次課金を再確認する。
-   - 2026-09-19確認: ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・1か月周期でactive。
+   - 2026-09-19確認: ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・1か月周期でactive。旧1,980円 / 4,980円 / 9,800円のPriceはinactive化済み。
    - Stripe Priceの `tax_behavior` は現時点で `unspecified`。アプリは追加税額を加算せずPriceのunit_amountを請求総額として表示・決済する構成。
 4. Stripe本番モードのCustomer Portalで、支払い方法変更、請求履歴、プラン変更、キャンセル条件を設定する。
    - 2026-09-18確認: 支払い方法変更、請求履歴、期間終了時の解約は有効。解約時のprorationはnone。
@@ -85,7 +85,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
    - 2026-09-19現在、`STRIPE_MODE`、受付Bot専用live restricted key（`rk_live_...`）、Webhook secret、新料金の3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
-   - `/api/stripe/readiness` はHTTP 200 / `ready:true` を確認済み。Stripe構成上の技術ブロッカーは解消済み。
+   - `/api/stripe/readiness` は2026-09-19にもHTTP 200 / `ready:true` を確認済み。Stripe構成上の技術ブロッカーは解消済み。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
