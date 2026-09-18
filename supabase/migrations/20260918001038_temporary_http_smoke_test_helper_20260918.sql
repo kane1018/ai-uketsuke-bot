@@ -1,0 +1,3 @@
+-- Historical smoke-test helper. Intentionally a no-op on replay.
+-- The temporary http extension was removed immediately afterward and is not part
+-- of the canonical application schema.

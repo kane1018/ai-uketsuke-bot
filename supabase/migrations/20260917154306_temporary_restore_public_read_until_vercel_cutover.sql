@@ -1,0 +1,3 @@
+-- Historical operational bridge. Intentionally a no-op on replay.
+-- Production temporarily restored anonymous published-bot reads here, then removed
+-- them at 20260918001104. Fresh environments should never expose that window.

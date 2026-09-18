@@ -1,0 +1,2 @@
+-- Historical cleanup. Intentionally a no-op on replay because the replay baseline
+-- never enables the temporary http extension.

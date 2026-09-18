@@ -1,0 +1,1 @@
+-- Historical readiness probe helper. Intentionally a no-op on replay.
