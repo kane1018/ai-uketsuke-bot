@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { safeInternalPath } from "../src/lib/navigation.ts";
+import { getClientIp } from "../src/lib/request-ip.ts";
 import { validateResponseValue } from "../src/lib/response-validation.ts";
 
 test("safeInternalPath accepts only local application paths", () => {
@@ -11,6 +12,21 @@ test("safeInternalPath accepts only local application paths", () => {
   assert.equal(safeInternalPath("javascript:alert(1)"), "/dashboard");
   assert.equal(safeInternalPath("//example.com/path"), "/dashboard");
   assert.equal(safeInternalPath("/\\example.com/path"), "/dashboard");
+});
+
+test("client IP prefers Vercel's preserved forwarding header", () => {
+  const trusted = new Headers({
+    "x-vercel-forwarded-for": "203.0.113.10",
+    "x-forwarded-for": "198.51.100.99",
+    "x-real-ip": "192.0.2.5",
+  });
+  assert.equal(getClientIp(trusted), "203.0.113.10");
+
+  const generic = new Headers({ "x-forwarded-for": "198.51.100.1, 198.51.100.2" });
+  assert.equal(getClientIp(generic), "198.51.100.1");
+
+  assert.equal(getClientIp(new Headers({ "x-real-ip": "192.0.2.8" })), "192.0.2.8");
+  assert.equal(getClientIp(new Headers()), "unknown");
 });
 
 test("response validation rejects values outside the server question definition", () => {
