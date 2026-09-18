@@ -31,11 +31,27 @@ export async function PATCH(
     // RLS ensures the user can only touch their own bot.
     const { data: bot, error: fetchError } = await supabase
       .from("bots")
-      .select("id, user_id")
+      .select("id, user_id, company_name")
       .eq("id", id)
       .single();
 
     if (fetchError || !bot) return jsonError("Botが見つかりません", 404);
+
+    if (status === "published") {
+      const effectiveCompanyName = (info?.company_name ?? bot.company_name ?? "").trim();
+      if (!effectiveCompanyName) {
+        return jsonError("公開するには会社・事業者名を設定してください", 400);
+      }
+
+      const { count: questionCount, error: questionError } = await supabase
+        .from("bot_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("bot_id", id);
+      if (questionError) return jsonError("公開条件の確認に失敗しました", 400);
+      if ((questionCount ?? 0) < 1) {
+        return jsonError("公開するには質問を1つ以上作成してください", 400);
+      }
+    }
 
     const update: Record<string, unknown> = {};
     if (info) Object.assign(update, info);
