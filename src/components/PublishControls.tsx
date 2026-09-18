@@ -8,10 +8,12 @@ export function PublishControls({
   botId,
   status,
   canPublish,
+  publishBlockReason,
 }: {
   botId: string;
   status: BotStatus;
   canPublish: boolean;
+  publishBlockReason?: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,7 @@ export function PublishControls({
             <p className="text-xs text-gray-500">
               {canPublish
                 ? "公開すると、公開URLと埋め込みコードが有効になります。"
-                : "公開するには、質問を1つ以上作成してください。"}
+                : publishBlockReason || "公開条件を確認してください。"}
             </p>
           </div>
           <button
