@@ -43,7 +43,29 @@ export async function ensureStripePortalConfiguration(appUrl: string) {
             mode: "at_period_end",
             proration_behavior: "none",
           },
-          subscription_update: { enabled: false },
+          subscription_update: {
+            enabled: true,
+            billing_cycle_anchor: "unchanged",
+            default_allowed_updates: ["price"],
+            proration_behavior: "always_invoice",
+            products: [
+              {
+                product: "prod_Uj0gwUxkRtVlfF",
+                prices: ["price_1TjYf7Foat2NfwYmpRakEuXo"],
+              },
+              {
+                product: "prod_Uj0iwveLSczaZs",
+                prices: ["price_1TjYh9Foat2NfwYmJdkeTKRE"],
+              },
+              {
+                product: "prod_Uj0kb47azNsSYc",
+                prices: ["price_1TjYixFoat2NfwYmEGfrWsMy"],
+              },
+            ],
+            schedule_at_period_end: {
+              conditions: [{ type: "decreasing_item_amount" }],
+            },
+          },
         },
       });
       return created.id;
