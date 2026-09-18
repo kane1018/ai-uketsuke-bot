@@ -24,7 +24,7 @@ export default async function PublicChatPage({
     .eq("status", "published")
     .single();
 
-  if (!bot) notFound();
+  if (!bot || !bot.company_name?.trim()) notFound();
 
   const { data: questions } = await supabase
     .from("bot_questions")
@@ -43,7 +43,7 @@ export default async function PublicChatPage({
         <ChatForm
           slug={bot.public_slug}
           botName={bot.name}
-          operatorName={bot.company_name || bot.name}
+          operatorName={bot.company_name}
           openingMessage={bot.opening_message ?? ""}
           completionMessage={bot.completion_message ?? ""}
           ctaMessage={bot.cta_message ?? ""}
