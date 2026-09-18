@@ -18,7 +18,7 @@ export function LegalFooter() {
             </Link>
           ))}
         </nav>
-        <p>© {new Date().getFullYear()} AI受付Bot作成サービス</p>
+        <p>© {new Date().getFullYear()} 受付Bot作成サービス</p>
       </div>
     </footer>
   );

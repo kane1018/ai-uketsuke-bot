@@ -3,23 +3,23 @@ import "server-only";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 
-const PORTAL_HEADLINE = "AI受付Bot 契約管理";
+const PORTAL_HEADLINE = "受付Bot 契約管理";
 const PORTAL_POLICY_METADATA = {
   service: "ai-uketsuke-bot",
-  portal_policy: "v1",
+  portal_policy: "v2",
 } as const;
 const PORTAL_PRODUCTS = [
   {
     product: "prod_Uj0gwUxkRtVlfF",
-    prices: ["price_1TjYf7Foat2NfwYmpRakEuXo"],
+    prices: ["price_1UH4DyFoat2NfwYm8OKM91HT"],
   },
   {
     product: "prod_Uj0iwveLSczaZs",
-    prices: ["price_1TjYh9Foat2NfwYmJdkeTKRE"],
+    prices: ["price_1UH4E2Foat2NfwYml6PDoPbT"],
   },
   {
     product: "prod_Uj0kb47azNsSYc",
-    prices: ["price_1TjYixFoat2NfwYmEGfrWsMy"],
+    prices: ["price_1UH4E5Foat2NfwYmPOUzup37"],
   },
 ] as const;
 

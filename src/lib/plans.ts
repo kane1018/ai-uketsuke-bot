@@ -14,8 +14,7 @@ export interface PlanDefinition {
   name: string;
   price: number;
   botLimit: number;
-  monthlyResponseLimit: number;
-  monthlyAiGenerationLimit: number;
+  monthlyResponseLimit: number | null;
   iframeEnabled: boolean;
   brandingVisible: boolean;
   features: string[];
@@ -30,43 +29,39 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     price: 0,
     botLimit: 1,
     monthlyResponseLimit: 30,
-    monthlyAiGenerationLimit: 3,
     iframeEnabled: false,
     brandingVisible: true,
-    features: ["メール通知", "公開URL", "AI受付Botロゴ表示"],
+    features: ["メール通知", "公開URL", "受付Botロゴ表示"],
   },
   light: {
     id: "light",
     name: "ライト",
-    price: 1980,
+    price: 980,
     botLimit: 1,
-    monthlyResponseLimit: 300,
-    monthlyAiGenerationLimit: 30,
+    monthlyResponseLimit: null,
     iframeEnabled: true,
     brandingVisible: true,
-    features: ["メール通知", "公開URL", "iframe埋め込み"],
+    features: ["メール通知", "公開URL", "iframe埋め込み", "回答数無制限"],
   },
   standard: {
     id: "standard",
     name: "スタンダード",
-    price: 4980,
+    price: 1980,
     botLimit: 3,
-    monthlyResponseLimit: 1000,
-    monthlyAiGenerationLimit: 100,
+    monthlyResponseLimit: null,
     iframeEnabled: true,
     brandingVisible: false,
-    features: ["メール通知", "公開URL", "iframe埋め込み", "ロゴ非表示"],
+    features: ["メール通知", "公開URL", "iframe埋め込み", "ロゴ非表示", "回答数無制限"],
   },
   pro: {
     id: "pro",
     name: "プロ",
-    price: 9800,
+    price: 3980,
     botLimit: 10,
-    monthlyResponseLimit: 3000,
-    monthlyAiGenerationLimit: 300,
+    monthlyResponseLimit: null,
     iframeEnabled: true,
     brandingVisible: false,
-    features: ["メール通知", "公開URL", "iframe埋め込み", "ロゴ非表示"],
+    features: ["メール通知", "公開URL", "iframe埋め込み", "ロゴ非表示", "回答数無制限"],
   },
 };
 

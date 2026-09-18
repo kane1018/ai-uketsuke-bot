@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/LegalPageLayout";
 import { LEGAL_BUSINESS_INFO } from "@/lib/legal-info";
 
-export const metadata: Metadata = { title: "利用規約 | AI受付Bot" };
+export const metadata: Metadata = { title: "利用規約 | 受付Bot" };
 
 export default function TermsPage() {
   return (
     <LegalPageLayout
       title="利用規約"
-      description="AI受付Bot作成サービスをご利用いただく際の条件を定めるものです。"
+      description="受付Bot作成サービスをご利用いただく際の条件を定めるものです。"
     >
       <section>
         <h2>1. 適用・運営者</h2>
@@ -17,7 +17,7 @@ export default function TermsPage() {
           <span className="font-semibold text-amber-800">
             {LEGAL_BUSINESS_INFO.businessName}
           </span>
-          （以下「運営者」）が提供するAI受付Bot作成サービス（以下「本サービス」）の利用条件を定めます。
+          （以下「運営者」）が提供する受付Bot作成サービス（以下「本サービス」）の利用条件を定めます。
           本サービスを利用する方（以下「利用者」）は、本規約に同意したうえで利用するものとします。
         </p>
       </section>
@@ -25,8 +25,8 @@ export default function TermsPage() {
       <section>
         <h2>2. サービス概要</h2>
         <p className="mt-3">
-          本サービスは、利用者がチャット形式の受付Botを作成、公開、管理し、
-          質問設計や文章生成にAIを利用できるSaaSです。
+          本サービスは、利用者がチャット形式の受付Botを作成、公開、管理できるSaaSです。
+          用途・業種ごとの受付テンプレートを用意し、利用者は質問を自由に編集できます。
           公開されたBotは、利用者が設定した質問に沿って回答を受け付けます。
         </p>
       </section>
@@ -53,13 +53,12 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>5. AI生成内容・回答内容</h2>
+        <h2>5. 質問内容・回答内容</h2>
         <p className="mt-3">
-          AIが生成する質問、文章、提案等は、正確性、完全性、最新性、
-          特定目的への適合性を保証するものではありません。
-          利用者は公開前に内容を確認し、医療・法律・金融その他専門的判断が必要な用途では、
-          必要に応じて資格を有する専門家の確認を得るものとします。
-          Botへの回答内容についても、運営者はその真実性を保証しません。
+          本サービスが用意する受付テンプレートは一般的な利用例をもとにした初期設定です。
+          利用者は公開前に質問内容を確認し、用途に応じて編集するものとします。
+          医療・法律・金融その他専門的判断が必要な用途では、必要に応じて資格を有する専門家の確認を得てください。
+          Botへの回答内容について、運営者はその真実性、正確性または完全性を保証しません。
         </p>
       </section>
 
@@ -91,7 +90,7 @@ export default function TermsPage() {
       <section>
         <h2>8. 外部サービス</h2>
         <p className="mt-3">
-          本サービスは、認証・データ保存、決済、メール送信、AI生成、
+          本サービスは、認証・データ保存、決済、メール送信、
           ホスティング等のため外部サービスを利用します。
           外部サービスの障害、仕様変更、利用制限等により、
           本サービスの全部または一部が利用できない場合があります。
@@ -143,7 +142,7 @@ export default function TermsPage() {
         <h2>13. 保証の範囲</h2>
         <p className="mt-3">
           運営者は、本サービスが常に中断なく動作すること、
-          生成内容・回答内容・保存データが常に正確または完全であること、
+          テンプレート・回答内容・保存データが常に正確または完全であること、
           利用者の特定の目的や期待する成果に適合することを保証しません。
           ただし、法令上運営者が負うべき責任を免除するものではありません。
         </p>

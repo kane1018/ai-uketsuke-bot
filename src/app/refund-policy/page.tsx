@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/LegalPageLayout";
 import { LEGAL_BUSINESS_INFO } from "@/lib/legal-info";
 
-export const metadata: Metadata = { title: "解約・返金ポリシー | AI受付Bot" };
+export const metadata: Metadata = { title: "解約・返金ポリシー | 受付Bot" };
 
 export default function RefundPolicyPage() {
   return (

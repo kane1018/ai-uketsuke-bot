@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       branding_settings: {
         // This Stripe account is shared with other services. Override only the
         // hosted Checkout header so customers see the product they are buying.
-        display_name: "AI受付Bot",
+        display_name: "受付Bot",
       },
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/dashboard/billing?success=true`,

@@ -3,16 +3,16 @@
 この文書は、テストモードで検証済みの月額課金をStripe本番モードへ切り替えるための手順です。
 秘密値はリポジトリ、Issue、チャット、スクリーンショットへ貼り付けず、StripeとVercelの管理画面内だけで扱います。
 
-## 2026-09-18 現在の本番状態
+## 2026-09-19 現在の本番状態
 
 - Stripeアカウントは本人確認済みで、カード決済・入金とも有効。追加の必須確認事項はない。
-- AI受付Botの3つのlive Priceは有効で、ライト1,980円、スタンダード4,980円、プロ9,800円、すべてJPY・月次。
+- 受付Botの3つのlive Priceは有効で、ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・月次。
 - 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
 - Supabaseにはtestモードの課金検証履歴のみ存在し、live subscription / live billing eventはまだない。
 - 本番 `/api/stripe/readiness` は2026-09-18にHTTP 200 / `ready:true` を確認済み。live restricted key、3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
-- Vercel Productionの `STRIPE_SECRET_KEY` にはAI受付Bot専用の `rk_live_...` を設定済み。共有Stripeアカウントの既存Standard live keyはローテーションしていないため、他サービスへの影響を避けている。
-- AI受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v1` を持つ設定を自動作成・再利用する。現行設定IDは `bpc_1UH3NdFoat2NfwYmuQLfvlIh`。
-- Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールはAI受付Bot専用ではない。Checkout Session上部は「AI受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
+- Vercel Productionの `STRIPE_SECRET_KEY` には受付Bot専用の `rk_live_...` を設定済み。共有Stripeアカウントの既存Standard live keyはローテーションしていないため、他サービスへの影響を避けている。
+- 受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v2` を持つ設定を自動作成・再利用し、新料金の3 Priceだけをプラン変更先として許可する。
+- Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールは受付Bot専用ではない。Checkout Session上部は「受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
 
 ## モードを混在させない
 
@@ -25,15 +25,15 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 任意（Stripe.js追加時） | 任意（現行Hosted Checkoutでは未使用） |
 | `STRIPE_SECRET_KEY` | `sk_test_...` / `rk_test_...` | `sk_live_...` / `rk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
-| `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1TjYf7Foat2NfwYmpRakEuXo` |
-| `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1TjYh9Foat2NfwYmJdkeTKRE` |
-| `STRIPE_PRICE_PRO` | テストPrice ID | `price_1TjYixFoat2NfwYmEGfrWsMy` |
+| `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1UH4DyFoat2NfwYm8OKM91HT` |
+| `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1UH4E2Foat2NfwYml6PDoPbT` |
+| `STRIPE_PRICE_PRO` | テストPrice ID | `price_1UH4E5Foat2NfwYmPOUzup37` |
 
 テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもモードをまたいで利用できません。アプリは`STRIPE_MODE`とSecret keyのprefix、およびWebhook/Subscriptionの`livemode`を照合し、不一致を拒否します。
 
 ## DBとアプリのtest/live分離
 
-[`supabase/migrations/202606180001_separate_stripe_modes.sql`](../supabase/migrations/202606180001_separate_stripe_modes.sql)を適用すると、`subscriptions`と`billing_events`に`stripe_mode`が追加されます。
+[`supabase/migrations/20260918055933_reconcile_stripe_mode_separation_20260918.sql`](../supabase/migrations/20260918055933_reconcile_stripe_mode_separation_20260918.sql)で、`subscriptions`と`billing_events`のtest/live分離を正規化しています。
 
 - 既存行は削除せず、すべて`test`としてバックフィルする
 - 同一ユーザーがtest/liveそれぞれ1件のsubscriptionを保持できる
@@ -61,15 +61,15 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - プレースホルダーを残さず、事業者本人または専門家の確認を完了する。
 2. Stripe Dashboard、Checkout、領収書、Customer Portalに表示する公開ビジネス名が、法務ページの事業者表示と整合していることを確認する。
 3. Stripe本番モードで3プランと上記Price IDの金額・通貨・月次課金を再確認する。
-   - 2026-09-18確認: ライト1,980円、スタンダード4,980円、プロ9,800円、すべてJPY・1か月周期でactive。
+   - 2026-09-19確認: ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・1か月周期でactive。
    - Stripe Priceの `tax_behavior` は現時点で `unspecified`。アプリは追加税額を加算せずPriceのunit_amountを請求総額として表示・決済する構成。
 4. Stripe本番モードのCustomer Portalで、支払い方法変更、請求履歴、プラン変更、キャンセル条件を設定する。
    - 2026-09-18確認: 支払い方法変更、請求履歴、期間終了時の解約は有効。解約時のprorationはnone。
-   - AI受付Bot専用Customer Portal設定を使用する。`STRIPE_PORTAL_CONFIGURATION_ID` が設定済みならその設定を利用し、未設定ならアプリが初回Portal利用時に専用設定を自動作成して再利用する。
+   - 受付Bot専用Customer Portal設定を使用する。`STRIPE_PORTAL_CONFIGURATION_ID` が設定済みならその設定を利用し、未設定ならアプリが初回Portal利用時に専用設定を自動作成して再利用する。
    - 自動作成する専用設定には、利用規約URL `https://chatbot-support.com/terms`、プライバシーポリシーURL `https://chatbot-support.com/privacy`、支払方法変更、請求履歴、期間終了時解約を設定する。
 5. Stripe本番モードのWebhook Endpointを確認する。
    - URL: `https://chatbot-support.com/api/stripe/webhook`
-   - 2026-09-18: AI受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuk3Foat2NfwYmoT7fdYsT`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。旧Endpoint `we_1UGuabFoat2NfwYm3xFYt7cN` は無効化済み。
+   - 2026-09-18: 受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuk3Foat2NfwYmoT7fdYsT`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。旧Endpoint `we_1UGuabFoat2NfwYm3xFYt7cN` は無効化済み。
    - イベント:
      - `checkout.session.completed`
      - `customer.subscription.created`
@@ -84,7 +84,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
-   - 2026-09-18現在、`STRIPE_MODE`、AI受付Bot専用live restricted key（`rk_live_...`）、Webhook secret、3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
+   - 2026-09-19現在、`STRIPE_MODE`、受付Bot専用live restricted key（`rk_live_...`）、Webhook secret、新料金の3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
    - `/api/stripe/readiness` はHTTP 200 / `ready:true` を確認済み。Stripe構成上の技術ブロッカーは解消済み。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
@@ -92,7 +92,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 13. `subscriptions`にlive Customer/Subscription/Priceが反映されたことを確認する。
 14. `billing_events`に対象イベントが保存され、Stripeの本番Webhook配信が成功していることを確認する。
 15. Customer Portalで契約内容、支払い方法、プラン変更、キャンセル、戻り先を確認する。
-16. Bot作成、AI生成、公開回答、回答ログ、メール通知をスモークテストする。
+16. テンプレートからのBot作成、質問編集、公開回答、回答ログ、メール通知をスモークテストする。
 
 ## 課金状態とダウングレード時の運用
 
@@ -119,11 +119,11 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [x] 料金表示は`PLANS`のStripe対象プラン金額から生成し、別途税額を加算しない表示へ統一
 - [x] `LEGAL_PENDING_VALUE`（`【未確定】`）が`LEGAL_BUSINESS_INFO`に残っていない
 - [ ] 住所の請求時開示方式を含む特商法表示について、事業者本人または専門家が最終確認
-- [x] Stripe Checkout上部の表示名はSession単位で「AI受付Bot」に上書き
-- [x] AI受付Botの3つのlive Productにsubscription用明細表記 `AI UKETSUKE BOT` を設定
+- [x] Stripe Checkout上部の表示名はSession単位で「受付Bot」に上書き
+- [x] 受付Botの3つのlive Productにsubscription用明細表記 `UKETSUKE BOT` を設定
 - [ ] Stripeの領収書・Customer Portal等で使われるアカウント共通のPublic business nameを最終確認
   - Stripeアカウントは他サービスと共用しているため、CheckoutのSession単位表示名とは別に、領収書・Portal上のBusiness nameはアカウント共通となる。
-  - 他サービスへ影響するアカウント共通名の変更は自動実施しない。共通の法的事業者名へ統一するか、AI受付Bot専用Stripeアカウントへ分離するかを本番課金開始前に確定する。
+  - 他サービスへ影響するアカウント共通名の変更は自動実施しない。共通の法的事業者名へ統一するか、受付Bot専用Stripeアカウントへ分離するかを本番課金開始前に確定する。
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。

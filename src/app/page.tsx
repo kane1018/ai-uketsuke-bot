@@ -8,7 +8,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-gray-100 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <span className="text-lg font-bold text-brand-700">AI受付Bot</span>
+          <span className="text-lg font-bold text-brand-700">受付Bot</span>
           <nav className="flex items-center gap-2">
             <Link href="/pricing" className="btn-ghost hidden sm:inline-flex">
               料金プラン
@@ -32,12 +32,12 @@ export default function LandingPage() {
           目的を選ぶだけで、
           <br className="hidden sm:block" />
           自社用の
-          <span className="text-brand-600">AI受付Bot</span>が作れる
+          <span className="text-brand-600">受付Bot</span>が作れる
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-gray-600 sm:text-lg">
           「問い合わせ対応」「相談受付」「採用応募受付」などの目的と業種を選ぶと、
-          AIが質問項目とチャットの流れを自動生成。
-          編集して公開するだけで、チャット形式の受付フォームが完成します。
+          用途に合った受付テンプレートを自動で準備します。
+          質問を必要に応じて編集して公開するだけで、チャット形式の受付フォームが完成します。
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/signup" className="btn-primary w-full sm:w-auto">
@@ -65,8 +65,8 @@ export default function LandingPage() {
               },
               {
                 step: "2",
-                title: "AIが質問を自動生成",
-                body: "会社情報を入れると、最適な質問項目をAIが作成します。",
+                title: "テンプレートを自動準備",
+                body: "用途と業種に合わせた質問項目がすぐに入ります。",
               },
               {
                 step: "3",

@@ -24,8 +24,8 @@ export const PURPOSES = [
   },
   {
     value: "diagnosis",
-    label: "診断コンテンツ",
-    description: "質問に答えるとおすすめを提案します",
+    label: "事前ヒアリング",
+    description: "希望条件や状況を整理して受け付けます",
     icon: "🔍",
   },
   {

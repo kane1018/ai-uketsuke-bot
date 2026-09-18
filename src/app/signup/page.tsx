@@ -71,7 +71,7 @@ export default function SignupPage() {
           href="/"
           className="mb-6 block text-center text-lg font-bold text-brand-700"
         >
-          AI受付Bot
+          受付Bot
         </Link>
         <div className="card p-6 sm:p-8">
           <h1 className="text-xl font-bold">新規登録</h1>

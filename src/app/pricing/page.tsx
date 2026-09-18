@@ -25,7 +25,7 @@ export default async function PricingPage({
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-lg font-bold text-brand-700">
-            AI受付Bot
+            受付Bot
           </Link>
           <div className="flex gap-2">
             {user ? (
@@ -45,12 +45,12 @@ export default async function PricingPage({
         <div className="text-center">
           <h1 className="text-3xl font-bold sm:text-4xl">シンプルな月額プラン</h1>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-            まずは無料で試し、必要なBot数や回答数に合わせてアップグレードできます。
+            まずは無料で試し、必要なBot数や機能に合わせてアップグレードできます。
           </p>
           <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-gray-600">
             有料プランは1か月単位で、解約するまで1か月ごとに自動更新されます。
             表示価格が実際の支払総額で、これに消費税等を別途加算しません。
-            次回更新日前までに請求管理画面から解約でき、解約手数料はありません。
+            有料プランは月間回答数を制限しません。次回更新日前までに請求管理画面から解約でき、解約手数料はありません。
           </p>
         </div>
 
@@ -89,8 +89,10 @@ export default async function PricingPage({
                 )}
                 <dl className="mt-5 space-y-2 text-sm">
                   <Limit label="Bot数" value={`${plan.botLimit}個`} />
-                  <Limit label="月間回答数" value={`${plan.monthlyResponseLimit.toLocaleString()}件`} />
-                  <Limit label="AI生成" value={`${plan.monthlyAiGenerationLimit}回`} />
+                  <Limit
+                    label="月間回答数"
+                    value={plan.monthlyResponseLimit === null ? "無制限" : `${plan.monthlyResponseLimit.toLocaleString()}件`}
+                  />
                 </dl>
                 <ul className="my-6 flex-1 space-y-2 text-sm text-gray-600">
                   {plan.features.map((feature) => (

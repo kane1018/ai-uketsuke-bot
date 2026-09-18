@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
         respondentName = flat;
     }
 
-    // The monthly-limit check and response insert run in one DB transaction.
-    // This prevents concurrent public submissions from overshooting the plan.
+    // Free-plan monthly-limit enforcement and response insert run in one DB transaction.
+    // Paid plans pass a null limit, so legitimate submissions are not capped.
     const { data: rows, error: insertError } = await admin.rpc(
       "insert_response_with_monthly_limit",
       {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
     if (insertResult?.limit_reached) {
       return jsonError(
-        "現在、このBotは月間回答数の上限に達しています。管理者にお問い合わせください。",
+        "無料プランの月間回答数上限に達しています。Bot運営者にお問い合わせください。",
         429
       );
     }
