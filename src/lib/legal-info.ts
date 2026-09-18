@@ -7,20 +7,22 @@ export const LEGAL_PENDING_VALUE = "【未確定】本番決済開始前に入�
 // accounts, environment variables, payment data, repository metadata, or
 // unrelated projects.
 export const LEGAL_BUSINESS_INFO = {
-  businessName: LEGAL_PENDING_VALUE,
-  representativeName: LEGAL_PENDING_VALUE,
+  businessName: "直井寛水",
+  representativeName: "直井 寛水",
   address: LEGAL_PENDING_VALUE,
-  phoneNumber: LEGAL_PENDING_VALUE,
+  phoneNumber: "080-3366-1814",
   emailAddress: LEGAL_PENDING_VALUE,
   inquiryEmail: LEGAL_PENDING_VALUE,
-  inquiryResponseTime: LEGAL_PENDING_VALUE,
+  inquiryResponseTime: "平日10:00〜18:00",
 } as const;
 
+export function isPendingLegalValue(value: string) {
+  const normalized = value.trim();
+  return normalized.length === 0 || normalized === LEGAL_PENDING_VALUE;
+}
+
 export function hasPendingLegalBusinessInfo() {
-  return Object.values(LEGAL_BUSINESS_INFO).some((value) => {
-    const normalized = value.trim();
-    return normalized.length === 0 || normalized === LEGAL_PENDING_VALUE;
-  });
+  return Object.values(LEGAL_BUSINESS_INFO).some(isPendingLegalValue);
 }
 
 export type LegalDisclosureItem = {
@@ -36,15 +38,37 @@ const paidPlanPrices = [
 ].join("、");
 
 export const LEGAL_DISCLOSURE_ITEMS: readonly LegalDisclosureItem[] = [
-  { label: "事業者名", value: LEGAL_BUSINESS_INFO.businessName, pending: true },
-  { label: "運営責任者", value: LEGAL_BUSINESS_INFO.representativeName, pending: true },
-  { label: "所在地", value: LEGAL_BUSINESS_INFO.address, pending: true },
-  { label: "電話番号", value: LEGAL_BUSINESS_INFO.phoneNumber, pending: true },
-  { label: "メールアドレス", value: LEGAL_BUSINESS_INFO.emailAddress, pending: true },
+  {
+    label: "事業者名",
+    value: LEGAL_BUSINESS_INFO.businessName,
+    pending: isPendingLegalValue(LEGAL_BUSINESS_INFO.businessName),
+  },
+  {
+    label: "運営責任者",
+    value: LEGAL_BUSINESS_INFO.representativeName,
+    pending: isPendingLegalValue(LEGAL_BUSINESS_INFO.representativeName),
+  },
+  {
+    label: "所在地",
+    value: LEGAL_BUSINESS_INFO.address,
+    pending: isPendingLegalValue(LEGAL_BUSINESS_INFO.address),
+  },
+  {
+    label: "電話番号",
+    value: LEGAL_BUSINESS_INFO.phoneNumber,
+    pending: isPendingLegalValue(LEGAL_BUSINESS_INFO.phoneNumber),
+  },
+  {
+    label: "メールアドレス",
+    value: LEGAL_BUSINESS_INFO.emailAddress,
+    pending: isPendingLegalValue(LEGAL_BUSINESS_INFO.emailAddress),
+  },
   {
     label: "問い合わせ先",
     value: `${LEGAL_BUSINESS_INFO.inquiryEmail}（対応時間：${LEGAL_BUSINESS_INFO.inquiryResponseTime}）`,
-    pending: true,
+    pending:
+      isPendingLegalValue(LEGAL_BUSINESS_INFO.inquiryEmail) ||
+      isPendingLegalValue(LEGAL_BUSINESS_INFO.inquiryResponseTime),
   },
   {
     label: "販売価格",
