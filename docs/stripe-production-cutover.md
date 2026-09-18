@@ -54,8 +54,8 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - Stripe Priceの `tax_behavior` は現時点で `unspecified`。アプリは追加税額を加算せずPriceのunit_amountを請求総額として表示・決済する構成。
 4. Stripe本番モードのCustomer Portalで、支払い方法変更、請求履歴、プラン変更、キャンセル条件を設定する。
    - 2026-09-18確認: 支払い方法変更、請求履歴、期間終了時の解約は有効。解約時のprorationはnone。
-   - AI受付Bot専用Customer Portal設定を作成し、利用規約URLを `https://chatbot-support.com/terms`、プライバシーポリシーURLを `https://chatbot-support.com/privacy` に設定する。
-   - 作成したPortal configuration IDを `STRIPE_PORTAL_CONFIGURATION_ID` としてVercel Productionへ設定し、アプリはその設定を明示的に使用する。
+   - AI受付Bot専用Customer Portal設定を使用する。`STRIPE_PORTAL_CONFIGURATION_ID` が設定済みならその設定を利用し、未設定ならアプリが初回Portal利用時に専用設定を自動作成して再利用する。
+   - 自動作成する専用設定には、利用規約URL `https://chatbot-support.com/terms`、プライバシーポリシーURL `https://chatbot-support.com/privacy`、支払方法変更、請求履歴、期間終了時解約を設定する。
 5. Stripe本番モードでWebhook Endpointを作成する。
    - 2026-09-18確認時点では、AI受付Bot用のlive Webhook Endpointは存在しないため、本番課金開始前に必須。
    - URL: `https://chatbot-support.com/api/stripe/webhook`
@@ -73,7 +73,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 法務4ページと料金・解約条件の表示が確定している。
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
-9. Vercel ProductionのStripe環境変数を、`STRIPE_MODE=live`を含む同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。加えて `STRIPE_PORTAL_CONFIGURATION_ID` をAI受付Bot専用設定へ固定する。
+9. Vercel ProductionのStripe環境変数を、`STRIPE_MODE=live`を含む同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
