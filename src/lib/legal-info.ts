@@ -16,6 +16,12 @@ export const LEGAL_BUSINESS_INFO = {
   inquiryResponseTime: LEGAL_PENDING_VALUE,
 } as const;
 
+export function hasPendingLegalBusinessInfo() {
+  return Object.values(LEGAL_BUSINESS_INFO).some(
+    (value) => value === LEGAL_PENDING_VALUE
+  );
+}
+
 export type LegalDisclosureItem = {
   label: string;
   value: string;
