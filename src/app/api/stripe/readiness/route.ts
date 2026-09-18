@@ -36,12 +36,6 @@ export async function GET(request: NextRequest) {
 
   const appUrl = getAppUrl(request.nextUrl.origin);
   const appUrlOk = appUrl === "https://chatbot-support.com";
-  const publishableKey =
-    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? "";
-  const publishableKeyOk =
-    mode === "live"
-      ? publishableKey.startsWith("pk_live_")
-      : publishableKey.startsWith("pk_test_");
   const webhookSecret =
     process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "";
   const webhookSecretConfigured = webhookSecret.startsWith("whsec_");
@@ -54,7 +48,6 @@ export async function GET(request: NextRequest) {
     return failed("stripe_secret_key", {
       mode,
       appUrlOk,
-      publishableKeyOk,
       webhookSecretConfigured,
     });
   }
@@ -75,7 +68,6 @@ export async function GET(request: NextRequest) {
       return failed(`price_${plan}`, {
         mode,
         appUrlOk,
-        publishableKeyOk,
         webhookSecretConfigured,
         prices: priceChecks,
       });
@@ -105,7 +97,6 @@ export async function GET(request: NextRequest) {
     return failed("portal_configuration", {
       mode,
       appUrlOk,
-      publishableKeyOk,
       webhookSecretConfigured,
       prices: priceChecks,
     });
@@ -129,7 +120,6 @@ export async function GET(request: NextRequest) {
     return failed("webhook_endpoint", {
       mode,
       appUrlOk,
-      publishableKeyOk,
       webhookSecretConfigured,
       portalConfigurationOk,
       prices: priceChecks,
@@ -147,9 +137,7 @@ export async function GET(request: NextRequest) {
       ? "stripe_mode"
       : !appUrlOk
         ? "app_url"
-        : !publishableKeyOk
-          ? "publishable_key"
-          : !webhookSecretConfigured
+        : !webhookSecretConfigured
             ? "webhook_secret"
             : !allPricesOk
               ? "prices"
@@ -167,7 +155,6 @@ export async function GET(request: NextRequest) {
       mode,
       appUrlOk,
       secretKeyOk: true,
-      publishableKeyOk,
       webhookSecretConfigured,
       webhookEndpointOk,
       portalConfigurationOk,

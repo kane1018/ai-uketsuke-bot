@@ -6,12 +6,12 @@
 ## モードを混在させない
 
 StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscription IDはテストモードと本番モードで別物です。
-切り替えるときは、次の7項目を同じモードへまとめて変更してから再デプロイします。
+切り替えるときは、実際に使用するStripeサーバー設定を同じモードへまとめて変更してから再デプロイします。現在の決済導線はStripe Hosted Checkoutへリダイレクトする方式で、Stripe.jsは使用していません。
 
 | Vercel環境変数 | テスト環境 | 本番環境 |
 | --- | --- | --- |
 | `STRIPE_MODE` | `test` | `live` |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` | `pk_live_...` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 任意（Stripe.js追加時） | 任意（現行Hosted Checkoutでは未使用） |
 | `STRIPE_SECRET_KEY` | `sk_test_...` | `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
 | `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1TjYf7Foat2NfwYmpRakEuXo` |
@@ -59,7 +59,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 5. Stripe本番モードでWebhook Endpointを作成する。
    - 2026-09-18確認時点では、AI受付Bot用のlive Webhook Endpointは存在しないため、本番課金開始前に必須。
    - URL: `https://chatbot-support.com/api/stripe/webhook`
-   - 2026-09-18: AI受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuabFoat2NfwYm3xFYt7cN`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定する。
+   - 2026-09-18: AI受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuk3Foat2NfwYmoT7fdYsT`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。旧Endpoint `we_1UGuabFoat2NfwYm3xFYt7cN` は無効化済み。
    - イベント:
      - `checkout.session.completed`
      - `customer.subscription.created`
@@ -73,7 +73,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 法務4ページと料金・解約条件の表示が確定している。
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
-9. Vercel ProductionのStripe環境変数を、`STRIPE_MODE=live`を含む同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
+9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
@@ -126,4 +126,4 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - 切り替え日時、担当者、Vercel deployment URLを記録する。
 - 使用したPrice IDとWebhook Endpoint IDを記録する（秘密値は記録しない）。
 - 初回liveイベントのStripe event IDとDB反映結果を記録する。
-- 問題時はlive/test値を混在させず、7項目を一組として扱う。
+- 問題時はlive/test値を混在させず、実際に使用するStripeサーバー設定を一組として扱う。
