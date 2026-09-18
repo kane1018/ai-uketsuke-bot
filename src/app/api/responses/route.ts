@@ -5,7 +5,7 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendResponseNotification } from "@/lib/email";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 import type { ResponseAnswer } from "@/lib/types";
-import { getBillingOverview, recordUsageEvent } from "@/lib/billing";
+import { getEffectivePlan, recordUsageEvent } from "@/lib/billing";
 import { validateResponseValue } from "@/lib/response-validation";
 
 export const maxDuration = 30;
@@ -41,13 +41,7 @@ export async function POST(request: NextRequest) {
       return jsonError("このBotは公開されていません", 404);
     }
 
-    const { plan, usage } = await getBillingOverview(bot.user_id);
-    if (usage.responses >= plan.monthlyResponseLimit) {
-      return jsonError(
-        "現在、このBotは月間回答数の上限に達しています。管理者にお問い合わせください。",
-        429
-      );
-    }
+    const { plan } = await getEffectivePlan(bot.user_id);
 
     // Load the published questions so we can map answers to real question ids
     // and ignore any client-supplied junk.
@@ -101,22 +95,39 @@ export async function POST(request: NextRequest) {
         respondentName = flat;
     }
 
-    const { data: inserted, error: insertError } = await admin
-      .from("bot_responses")
-      .insert({
-        bot_id: bot.id,
-        respondent_name: respondentName,
-        respondent_email: respondentEmail,
-        respondent_phone: respondentPhone,
-        answers,
-        status: "new",
-      })
-      .select("id, created_at")
-      .single();
+    // The monthly-limit check and response insert run in one DB transaction.
+    // This prevents concurrent public submissions from overshooting the plan.
+    const { data: rows, error: insertError } = await admin.rpc(
+      "insert_response_with_monthly_limit",
+      {
+        p_bot_id: bot.id,
+        p_limit: plan.monthlyResponseLimit,
+        p_respondent_name: respondentName ?? "",
+        p_respondent_email: respondentEmail ?? "",
+        p_respondent_phone: respondentPhone ?? "",
+        p_answers: answers,
+      }
+    );
+    const insertResult = Array.isArray(rows) ? rows[0] : rows;
 
-    if (insertError || !inserted) {
+    if (insertError) {
+      console.error("[responses] atomic insert failed:", insertError);
       return jsonError("回答の保存に失敗しました", 500);
     }
+    if (insertResult?.limit_reached) {
+      return jsonError(
+        "現在、このBotは月間回答数の上限に達しています。管理者にお問い合わせください。",
+        429
+      );
+    }
+    if (!insertResult?.response_id || !insertResult?.response_created_at) {
+      return jsonError("回答の保存に失敗しました", 500);
+    }
+
+    const inserted = {
+      id: insertResult.response_id as string,
+      created_at: insertResult.response_created_at as string,
+    };
 
     // Fire-and-collect the email (never blocks success on email failure).
     const emailResult = await sendResponseNotification({

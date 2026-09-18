@@ -34,7 +34,14 @@ export interface UsageSnapshot {
 
 function monthStartIso() {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  return new Date(Date.UTC(year, month - 1, 1, -9)).toISOString();
 }
 
 export async function getSubscription(userId: string, stripeMode = getStripeMode()) {
@@ -74,9 +81,10 @@ export async function getUsageSnapshot(userId: string): Promise<UsageSnapshot> {
       .eq("bots.user_id", userId)
       .gte("created_at", since),
     admin
-      .from("ai_generation_logs")
-      .select("id", { count: "exact", head: true })
+      .from("usage_events")
+      .select("amount")
       .eq("user_id", userId)
+      .eq("event_type", "ai_generation")
       .gte("created_at", since),
   ]);
 
@@ -86,7 +94,10 @@ export async function getUsageSnapshot(userId: string): Promise<UsageSnapshot> {
   return {
     bots: botsResult.count ?? 0,
     responses: responsesResult.count ?? 0,
-    aiGenerations: generationsResult.count ?? 0,
+    aiGenerations: (generationsResult.data ?? []).reduce(
+      (sum, row) => sum + (row.amount ?? 0),
+      0
+    ),
   };
 }
 
@@ -111,4 +122,20 @@ export async function recordUsageEvent(
     metadata,
   });
   if (error) console.warn("[billing] failed to record usage event:", error.message);
+}
+
+
+export async function consumeAiGenerationQuota(
+  userId: string,
+  limit: number,
+  botId: string
+) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("consume_ai_generation_quota", {
+    p_user_id: userId,
+    p_limit: limit,
+    p_bot_id: botId,
+  });
+  if (error) throw new Error(`Failed to reserve AI generation quota: ${error.message}`);
+  return data === true;
 }
