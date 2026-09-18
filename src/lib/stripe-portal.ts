@@ -4,6 +4,10 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 
 const PORTAL_HEADLINE = "AI受付Bot 契約管理";
+const PORTAL_POLICY_METADATA = {
+  service: "ai-uketsuke-bot",
+  portal_policy: "v1",
+} as const;
 const PORTAL_PRODUCTS = [
   {
     product: "prod_Uj0gwUxkRtVlfF",
@@ -31,16 +35,18 @@ export function isStripePortalConfigurationReady(
   appUrl: string
 ) {
   const update = config.features.subscription_update;
-  const products = update.products ?? [];
-  const productsOk =
-    products.length === PORTAL_PRODUCTS.length &&
-    PORTAL_PRODUCTS.every((expected) =>
-      products.some(
-        (product) =>
-          product.product === expected.product &&
-          exactSet(product.prices, expected.prices)
+  const products = update.products;
+  const productsOk = products
+    ? products.length === PORTAL_PRODUCTS.length &&
+      PORTAL_PRODUCTS.every((expected) =>
+        products.some(
+          (product) =>
+            product.product === expected.product &&
+            exactSet(product.prices, expected.prices)
+        )
       )
-    );
+    : config.metadata?.service === PORTAL_POLICY_METADATA.service &&
+      config.metadata?.portal_policy === PORTAL_POLICY_METADATA.portal_policy;
 
   return (
     config.active &&
@@ -85,6 +91,7 @@ export async function ensureStripePortalConfiguration(appUrl: string) {
       if (existing) return existing.id;
 
       const created = await stripe.billingPortal.configurations.create({
+        metadata: { ...PORTAL_POLICY_METADATA },
         business_profile: {
           headline: PORTAL_HEADLINE,
           privacy_policy_url: `${appUrl}/privacy`,
