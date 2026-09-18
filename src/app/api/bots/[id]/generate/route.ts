@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateBotPlan, AIGenerationError } from "@/lib/openai";
 import { rateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
-import { getBillingOverview, recordUsageEvent } from "@/lib/billing";
+import { consumeAiGenerationQuota, getEffectivePlan } from "@/lib/billing";
 
 export const maxDuration = 60;
 
@@ -19,15 +19,6 @@ export async function POST(
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return jsonError("認証が必要です", 401);
-
-    const { plan: currentPlan, usage } = await getBillingOverview(user.id);
-    if (usage.aiGenerations >= currentPlan.monthlyAiGenerationLimit) {
-      return jsonError(
-        `今月のAI生成上限（${currentPlan.monthlyAiGenerationLimit}回）に達しています。プランをアップグレードしてください。`,
-        403,
-        { upgradeRequired: true }
-      );
-    }
 
     // Rate limit: 10 generations / minute / user.
     const rl = await rateLimit(`generate:${user.id}`, 10, 60_000);
@@ -49,6 +40,22 @@ export async function POST(
 
     if (botError || !bot) return jsonError("Botが見つかりません", 404);
 
+    const { plan: currentPlan } = await getEffectivePlan(user.id);
+    const quotaReserved = await consumeAiGenerationQuota(
+      user.id,
+      currentPlan.monthlyAiGenerationLimit,
+      bot.id
+    );
+    if (!quotaReserved) {
+      return jsonError(
+        `今月のAI生成上限（${currentPlan.monthlyAiGenerationLimit}回）に達しています。プランをアップグレードしてください。`,
+        403,
+        { upgradeRequired: true }
+      );
+    }
+
+    // Reserve quota before the external model call. Failed model attempts count
+    // because they still consume provider resources.
     // Call OpenAI (parsing + validation handled inside).
     let result;
     try {
@@ -77,10 +84,6 @@ export async function POST(
         } catch {
           /* logging is best-effort */
         }
-        await recordUsageEvent(user.id, "ai_generation", {
-          bot_id: bot.id,
-          success: false,
-        });
         return jsonError(err.message, 502);
       }
       throw err;
@@ -102,11 +105,6 @@ export async function POST(
       model: result.model,
       token_usage: result.tokenUsage,
     });
-    await recordUsageEvent(user.id, "ai_generation", {
-      bot_id: bot.id,
-      success: true,
-    });
-
     return jsonOk({ plan });
   } catch (err) {
     return handleRouteError(err);
