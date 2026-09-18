@@ -127,6 +127,12 @@ export function PricingAction({
               />
             </dl>
 
+            {error && (
+              <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             <p className="mt-4 text-xs leading-6 text-gray-600">
               詳細は
               <a href="/terms" className="text-brand-700 underline">
