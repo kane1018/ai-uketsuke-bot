@@ -1,7 +1,6 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getSubscription } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
 import { hasPendingLegalBusinessInfo } from "@/lib/legal-info";
@@ -13,6 +12,11 @@ import {
   getStripeMode,
   normalizePlan,
 } from "@/lib/stripe";
+import {
+  clearStripeBillingIdentity,
+  createStripeCustomerForUser,
+  getValidStripeCustomerId,
+} from "@/lib/stripe-customer";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 
 const checkoutSchema = z.object({ plan: z.enum(["light", "standard", "pro"]) });
@@ -37,11 +41,27 @@ export async function POST(request: NextRequest) {
         503
       );
     }
+
     const priceId = getPriceId(plan);
     const selectedPlan = PLANS[plan];
     const existing = await getSubscription(user.id, stripeMode);
 
+    const validCustomerId = await getValidStripeCustomerId(
+      existing?.stripe_customer_id
+    );
+    const staleCustomer = Boolean(
+      existing?.stripe_customer_id && !validCustomerId
+    );
+
+    if (staleCustomer) {
+      // Stripe customer IDs are account-scoped. When the application moves to
+      // a different Stripe account, an ID saved by the previous account must
+      // not block checkout or be reused against the new account.
+      await clearStripeBillingIdentity(user.id, stripeMode);
+    }
+
     if (
+      !staleCustomer &&
       existing?.stripe_subscription_id &&
       ["active", "trialing", "past_due"].includes(existing.status)
     ) {
@@ -52,26 +72,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let customerId = existing?.stripe_customer_id ?? null;
+    let customerId = validCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      customerId = await createStripeCustomerForUser({
+        userId: user.id,
         email: user.email,
-        metadata: { user_id: user.id, stripe_mode: stripeMode },
+        stripeMode,
       });
-      customerId = customer.id;
-
-      const admin = createAdminClient();
-      const { error } = await admin.from("subscriptions").upsert(
-        {
-          user_id: user.id,
-          stripe_mode: stripeMode,
-          stripe_customer_id: customerId,
-          plan: "free",
-          status: "none",
-        },
-        { onConflict: "user_id,stripe_mode" }
-      );
-      if (error) throw new Error(`Failed to save Stripe customer: ${error.message}`);
     }
 
     const appUrl = getAppUrl(request.nextUrl.origin);
@@ -79,8 +86,7 @@ export async function POST(request: NextRequest) {
       mode: "subscription",
       customer: customerId,
       branding_settings: {
-        // This Stripe account is shared with other services. Override only the
-        // hosted Checkout header so customers see the product they are buying.
+        // Keep the hosted Checkout header explicit even on a dedicated Stripe account.
         display_name: "受付Bot",
       },
       line_items: [{ price: priceId, quantity: 1 }],
@@ -99,12 +105,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!session.url) return jsonError("Checkout URLを作成できませんでした", 502);
+    if (!session.url) {
+      return jsonError("Checkout URLを作成できませんでした", 502);
+    }
     return jsonOk({ url: session.url });
   } catch (err) {
     if (err instanceof StripeConfigurationError) {
       console.error("[stripe checkout] configuration error:", err.message);
-      return jsonError("決済設定が完了していません。管理者にお問い合わせください。", 503);
+      return jsonError(
+        "決済設定が完了していません。管理者にお問い合わせください。",
+        503
+      );
     }
     return handleRouteError(err);
   }

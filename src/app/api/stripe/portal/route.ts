@@ -7,6 +7,10 @@ import {
   getStripe,
   getStripeMode,
 } from "@/lib/stripe";
+import {
+  clearStripeBillingIdentity,
+  getValidStripeCustomerId,
+} from "@/lib/stripe-customer";
 import { jsonError, jsonOk, handleRouteError } from "@/lib/api";
 import { ensureStripePortalConfiguration } from "@/lib/stripe-portal";
 
@@ -24,11 +28,22 @@ export async function POST(request: NextRequest) {
       return jsonError("請求情報がまだありません", 404);
     }
 
+    const customerId = await getValidStripeCustomerId(
+      subscription.stripe_customer_id
+    );
+    if (!customerId) {
+      await clearStripeBillingIdentity(user.id, stripeMode);
+      return jsonError(
+        "請求情報が現在の決済アカウントにありません。料金プランから再度お申し込みください。",
+        404
+      );
+    }
+
     const stripe = getStripe();
     const appUrl = getAppUrl(request.nextUrl.origin);
     const portalConfigurationId = await ensureStripePortalConfiguration(appUrl);
     const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
+      customer: customerId,
       return_url: `${appUrl}/dashboard/billing`,
       configuration: portalConfigurationId,
     });
