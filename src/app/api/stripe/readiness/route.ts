@@ -9,6 +9,7 @@ import {
 } from "@/lib/stripe";
 import {
   ensureStripePortalConfiguration,
+  getStripePortalProducts,
   isStripePortalConfigurationReady,
 } from "@/lib/stripe-portal";
 
@@ -81,13 +82,13 @@ export async function GET(request: NextRequest) {
   try {
     const portalConfigurationId =
       await ensureStripePortalConfiguration(appUrl);
-    const portal =
-      await stripe.billingPortal.configurations.retrieve(
-        portalConfigurationId
-      );
+    const [portal, portalProducts] = await Promise.all([
+      stripe.billingPortal.configurations.retrieve(portalConfigurationId),
+      getStripePortalProducts(),
+    ]);
     portalConfigurationOk =
       portal.livemode === (mode === "live") &&
-      isStripePortalConfigurationReady(portal, appUrl);
+      isStripePortalConfigurationReady(portal, appUrl, portalProducts);
   } catch (error) {
     console.error("[stripe readiness] portal check failed:", error);
     return failed("portal_configuration", {

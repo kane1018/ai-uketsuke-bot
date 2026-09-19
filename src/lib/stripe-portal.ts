@@ -1,49 +1,66 @@
 import "server-only";
 
 import type Stripe from "stripe";
-import { getStripe } from "@/lib/stripe";
+import { PAID_PLANS } from "@/lib/plans";
+import { getPriceId, getStripe } from "@/lib/stripe";
 
 const PORTAL_HEADLINE = "受付Bot 契約管理";
 const PORTAL_POLICY_METADATA = {
   service: "ai-uketsuke-bot",
   portal_policy: "v2",
 } as const;
-const PORTAL_PRODUCTS = [
-  {
-    product: "prod_Uj0gwUxkRtVlfF",
-    prices: ["price_1UH4DyFoat2NfwYm8OKM91HT"],
-  },
-  {
-    product: "prod_Uj0iwveLSczaZs",
-    prices: ["price_1UH4E2Foat2NfwYml6PDoPbT"],
-  },
-  {
-    product: "prod_Uj0kb47azNsSYc",
-    prices: ["price_1UH4E5Foat2NfwYmPOUzup37"],
-  },
-] as const;
 
 const CUSTOMER_UPDATES = ["name", "email", "address", "phone"] as const;
 let portalConfigurationPromise: Promise<string> | null = null;
 
+export interface StripePortalProduct {
+  product: string;
+  prices: string[];
+}
+
 function exactSet(actual: readonly string[], expected: readonly string[]) {
-  return actual.length === expected.length && expected.every((value) => actual.includes(value));
+  return (
+    actual.length === expected.length &&
+    expected.every((value) => actual.includes(value))
+  );
+}
+
+export async function getStripePortalProducts(): Promise<StripePortalProduct[]> {
+  const stripe = getStripe();
+  return Promise.all(
+    PAID_PLANS.map(async (plan) => {
+      const priceId = getPriceId(plan);
+      const price = await stripe.prices.retrieve(priceId);
+      const productId =
+        typeof price.product === "string" ? price.product : price.product.id;
+      if (!productId) {
+        throw new Error(
+          `Stripe price ${priceId} is not attached to a product`
+        );
+      }
+      return { product: productId, prices: [priceId] };
+    })
+  );
 }
 
 export function isStripePortalConfigurationReady(
   config: Stripe.BillingPortal.Configuration,
-  appUrl: string
+  appUrl: string,
+  expectedProducts?: readonly StripePortalProduct[]
 ) {
   const update = config.features.subscription_update;
   const products = update.products;
-  const productsOk = products
-    ? products.length === PORTAL_PRODUCTS.length &&
-      PORTAL_PRODUCTS.every((expected) =>
-        products.some(
-          (product) =>
-            product.product === expected.product &&
-            exactSet(product.prices, expected.prices)
-        )
+  const productsOk = expectedProducts
+    ? Boolean(
+        products &&
+          products.length === expectedProducts.length &&
+          expectedProducts.every((expected) =>
+            products.some(
+              (product) =>
+                product.product === expected.product &&
+                exactSet(product.prices, expected.prices)
+            )
+          )
       )
     : config.metadata?.service === PORTAL_POLICY_METADATA.service &&
       config.metadata?.portal_policy === PORTAL_POLICY_METADATA.portal_policy;
@@ -66,27 +83,44 @@ export function isStripePortalConfigurationReady(
     exactSet(update.default_allowed_updates, ["price"]) &&
     update.proration_behavior === "always_invoice" &&
     update.schedule_at_period_end.conditions.length === 1 &&
-    update.schedule_at_period_end.conditions[0]?.type === "decreasing_item_amount" &&
+    update.schedule_at_period_end.conditions[0]?.type ===
+      "decreasing_item_amount" &&
     productsOk
   );
 }
 
 export async function ensureStripePortalConfiguration(appUrl: string) {
   const stripe = getStripe();
+  const expectedProducts = await getStripePortalProducts();
   const configured = process.env.STRIPE_PORTAL_CONFIGURATION_ID?.trim();
+
   if (configured) {
-    const config = await stripe.billingPortal.configurations.retrieve(configured);
-    if (!isStripePortalConfigurationReady(config, appUrl)) {
-      throw new Error("Configured Stripe portal configuration does not match the required policy");
+    const config =
+      await stripe.billingPortal.configurations.retrieve(configured);
+    if (
+      !isStripePortalConfigurationReady(
+        config,
+        appUrl,
+        expectedProducts
+      )
+    ) {
+      throw new Error(
+        "Configured Stripe portal configuration does not match the required policy"
+      );
     }
     return configured;
   }
 
   if (!portalConfigurationPromise) {
     portalConfigurationPromise = (async () => {
-      const configs = await stripe.billingPortal.configurations.list({ limit: 100 });
+      const configs =
+        await stripe.billingPortal.configurations.list({ limit: 100 });
       const existing = configs.data.find((config) =>
-        isStripePortalConfigurationReady(config, appUrl)
+        isStripePortalConfigurationReady(
+          config,
+          appUrl,
+          expectedProducts
+        )
       );
       if (existing) return existing.id;
 
@@ -115,7 +149,7 @@ export async function ensureStripePortalConfiguration(appUrl: string) {
             billing_cycle_anchor: "unchanged",
             default_allowed_updates: ["price"],
             proration_behavior: "always_invoice",
-            products: PORTAL_PRODUCTS.map(({ product, prices }) => ({
+            products: expectedProducts.map(({ product, prices }) => ({
               product,
               prices: [...prices],
             })),
