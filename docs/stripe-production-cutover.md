@@ -20,8 +20,9 @@
 
 - 専用アカウント: `acct_1UHDvqGw1L7eOEYg`（秘密情報ではない識別子）
 - Stripe onboardingは提出済み。本人確認書類も提出・反映済みで、`details_submitted=true`。
-- 現在はStripeの追加コンプライアンス審査中。2026-09-19時点で `charges_enabled=false` / `payouts_enabled=false` / `requirements.disabled_reason=under_review`。
-- 残るRequirementは `interv_1UHGBRGw1L7eOEYgQl1HOD8Z.other_compliance_inquiry.form` の1件。Stripe Dashboard上の本人確認タスクは完了しており、追加審査の解消まではProductionを切り替えない。
+- 2026-09-19、追加コンプライアンスの `other_compliance_inquiry.form`（日本のオンライン決済事業者向けセキュリティチェックリスト）へ回答し、Stripeへ送信済み。回答送信後、Dashboardの「要対応」は「完了すべきアクティブなタスクはありません」に変わった。
+- 提出時点で確認できた実装事実に基づき、セキュリティ対策の実装主体は `Employee(s)`、ログイン対策は `Limited number of login attempts and throttling` と回答した。受付BotはSupabase Authを利用し、アプリ側にはメール/パスワード・Googleログインが存在するため「ログイン機能なし」は選択していない。
+- ユーザー側の追加提出タスクは0件だが、同日22時台の再確認時点では決済関連のステータスはまだ「一時停止」。支払い、Payouts、JCB、Link、MB WAY等が停止対象として残っている。Stripe側の審査・反映が完了して `charges_enabled=true` / `payouts_enabled=true` になるまではProductionを切り替えない。
 - 専用アカウントのlive Product / Priceは作成済み。
   - Light: Product `prod_VHr9DX3YAgwGil` / Price `price_1UHHReGw1L7eOEYgwqq6czjB` / 980円・月次
   - Standard: Product `prod_VHrAshBdTSMvwy` / Price `price_1UHHS3Gw1L7eOEYgSLY03qEI` / 1,980円・月次
@@ -153,7 +154,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [x] 受付Botの3つのlive Productにsubscription用明細表記 `UKETSUKE BOT` を設定
 - [ ] 受付Bot専用Stripeアカウントの本番有効化と切替を完了し、領収書・Customer Portal・カード明細の受付Bot向け表示を最終確認
   - Showroom ECとの共用アカウントは変更せず、受付Bot専用アカウントへ分離する方針を確定済み。
-  - 専用アカウントの法的事業形態・本人確認・入金先口座など、本人確認を要するStripe onboarding完了後にProductionを切り替える。
+  - 本人確認・onboarding・追加セキュリティチェックリストのユーザー側提出は完了済み。Dashboardのアクティブタスクは0件で、Stripe側の決済停止解除後にProductionを切り替える。
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。
