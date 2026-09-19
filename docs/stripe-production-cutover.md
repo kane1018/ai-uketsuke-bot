@@ -8,11 +8,29 @@
 - Stripeアカウントは本人確認済みで、カード決済・入金とも有効。追加の必須確認事項はない。
 - 受付Botの3つのlive Priceは有効で、ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・月次。
 - 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
-- Supabaseにはtestモードの課金検証履歴のみ存在し、live subscription / live billing eventはまだない。
+- 2026-09-19にライト980円のlive E2Eを1件実施済み。決済成功、Webhook/DB反映、Subscription解約、980円全額返金まで完了し、現在activeなlive subscriptionはない。Supabaseにはこのlive検証履歴が証跡として残っている。
 - 本番 `/api/stripe/readiness` は2026-09-19にHTTP 200 / `ready:true` を再確認済み。live restricted key、新料金の3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
-- Vercel Productionの `STRIPE_SECRET_KEY` には受付Bot専用の `rk_live_...` を設定済み。共有Stripeアカウントの既存Standard live keyはローテーションしていないため、他サービスへの影響を避けている。
+- Vercel Productionの `STRIPE_SECRET_KEY` には受付Bot用途のrestricted key（`rk_live_...`）を設定済みだが、現時点ではShowroom ECとの共用Stripeアカウント上で発行したキー。専用Stripeアカウント切替時に新アカウント側のキーへ交換する。
 - 受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v2` を持つ設定を自動作成・再利用し、新料金の3 Priceだけをプラン変更先として許可する。2026-09-19に `bpc_1UHAp6Foat2NfwYmbP1lEZux` の作成とreadiness PASSを確認済み。
-- Stripeアカウントは他サービスと共用しており、アカウント共通の表示名・プロフィールは受付Bot専用ではない。Checkout Session上部は「受付Bot」に上書き済みだが、領収書等のアカウント共通表示について本番開始前に運用方針を確定する。
+- 現在Productionが参照しているStripeアカウントはShowroom ECとの共用状態で、アカウント共通表示・プロフィール・カード明細表記は受付Bot専用ではない。このため専用Stripeアカウントへの分離を進行中。分離完了までは現行Production設定を維持する。
+
+## 受付Bot専用Stripeアカウントへの分離状況
+
+2026-09-19に日本・JPYの独立Stripeアカウントを新規作成し、表示名を「受付Bot」へ設定した。Showroom ECとはデータ・レポートを共有しない個別アカウントとして作成している。
+
+- 専用アカウント: `acct_1UHDvqGw1L7eOEYg`（秘密情報ではない識別子）
+- 本番環境: 未有効化。Stripe onboardingの「事業形態」選択で本人確認待ち。
+- 現在の本人確認待ち項目: 「個人または個人事業主」または「法人」の法的選択。推測で確定しない。
+- 専用アカウントのsandboxには、ライト980円/月、スタンダード1,980円/月、プロ3,980円/月の3商品を作成済み。
+- sandbox Product ID:
+  - Light: `prod_VHo88nklX6zzK3`
+  - Standard: `prod_VHo8TeChFL9O4P`
+  - Pro: `prod_VHo8vsrT61tiz3`
+- Stripe MCPは専用アカウントのsandboxについて必要最小限のカスタム権限まで設定済みだが、最終OAuth承認は本人操作待ち。本番環境はStripe onboarding完了まで選択不可。
+- アプリ側はPR #31/#32でStripeアカウント移行耐性を実装済み。旧アカウントのCustomer IDを新アカウントで再利用せず、Customer PortalのProduct/Priceも環境変数のPriceから動的解決する。
+- 分離準備中も現行Productionは変更せず、`/api/stripe/readiness` がHTTP 200 / `ready:true` の状態を維持する。
+
+本番有効化後は、専用アカウントでlive Product/Price、Webhook、Customer Portal、restricted keyを作成・検証し、その一式をVercel Productionへ同時に切り替える。切替成功とreadiness PASSを確認するまで、共用アカウント側の受付Bot設定は停止しない。
 
 ## モードを混在させない
 
@@ -121,9 +139,9 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [ ] 住所の請求時開示方式を含む特商法表示について、事業者本人または専門家が最終確認
 - [x] Stripe Checkout上部の表示名はSession単位で「受付Bot」に上書き
 - [x] 受付Botの3つのlive Productにsubscription用明細表記 `UKETSUKE BOT` を設定
-- [ ] Stripeの領収書・Customer Portal等で使われるアカウント共通のPublic business nameを最終確認
-  - Stripeアカウントは他サービスと共用しているため、CheckoutのSession単位表示名とは別に、領収書・Portal上のBusiness nameはアカウント共通となる。
-  - 他サービスへ影響するアカウント共通名の変更は自動実施しない。共通の法的事業者名へ統一するか、受付Bot専用Stripeアカウントへ分離するかを本番課金開始前に確定する。
+- [ ] 受付Bot専用Stripeアカウントの本番有効化と切替を完了し、領収書・Customer Portal・カード明細の受付Bot向け表示を最終確認
+  - Showroom ECとの共用アカウントは変更せず、受付Bot専用アカウントへ分離する方針を確定済み。
+  - 専用アカウントの法的事業形態・本人確認・入金先口座など、本人確認を要するStripe onboarding完了後にProductionを切り替える。
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。
