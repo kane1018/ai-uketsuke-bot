@@ -50,20 +50,20 @@ export function isStripePortalConfigurationReady(
 ) {
   const update = config.features.subscription_update;
   const products = update.products;
-  const productsOk = expectedProducts
-    ? Boolean(
-        products &&
-          products.length === expectedProducts.length &&
-          expectedProducts.every((expected) =>
-            products.some(
-              (product) =>
-                product.product === expected.product &&
-                exactSet(product.prices, expected.prices)
-            )
+  const metadataOk =
+    config.metadata?.service === PORTAL_POLICY_METADATA.service &&
+    config.metadata?.portal_policy === PORTAL_POLICY_METADATA.portal_policy;
+  const productsOk =
+    expectedProducts && products
+      ? products.length === expectedProducts.length &&
+        expectedProducts.every((expected) =>
+          products.some(
+            (product) =>
+              product.product === expected.product &&
+              exactSet(product.prices, expected.prices)
           )
-      )
-    : config.metadata?.service === PORTAL_POLICY_METADATA.service &&
-      config.metadata?.portal_policy === PORTAL_POLICY_METADATA.portal_policy;
+        )
+      : metadataOk;
 
   return (
     config.active &&
