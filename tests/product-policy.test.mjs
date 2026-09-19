@@ -33,3 +33,18 @@ test("OpenAI is not part of the application runtime", () => {
     false
   );
 });
+
+test("operator docs stay aligned with the current non-AI product policy", () => {
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  const envExample = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+
+  assert.match(readme, /\| ライト \| 980円 \|/);
+  assert.match(readme, /\| スタンダード \| 1,980円 \|/);
+  assert.match(readme, /\| プロ \| 3,980円 \|/);
+  assert.doesNotMatch(readme, /OPENAI_API_KEY|OPENAI_MODEL/);
+  assert.doesNotMatch(readme, /\/api\/bots\/\[id\]\/generate/);
+  assert.doesNotMatch(readme, /ライト（1,980円|スタンダード（4,980円|プロ（9,800円/);
+
+  assert.doesNotMatch(envExample, /OPENAI_API_KEY|OPENAI_MODEL/);
+  assert.doesNotMatch(envExample, /price_1TjZ/);
+});

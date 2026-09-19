@@ -12,6 +12,7 @@ import {
   getStripePortalProducts,
   isStripePortalConfigurationReady,
 } from "@/lib/stripe-portal";
+import { evaluateStripeAccountReadiness } from "@/lib/stripe-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,58 @@ export async function GET(request: NextRequest) {
       appUrlOk,
       webhookSecretConfigured,
     });
+  }
+
+  const expectedStripeAccountId =
+    process.env.STRIPE_EXPECTED_ACCOUNT_ID?.trim() ?? "";
+  const accountCheckRequired =
+    mode === "live" && expectedStripeAccountId.length > 0;
+  let stripeAccount: {
+    required: boolean;
+    accountMatches: boolean | null;
+    chargesEnabled: boolean | null;
+    payoutsEnabled: boolean | null;
+    requirementsClear: boolean | null;
+  } = {
+    required: accountCheckRequired,
+    accountMatches: null,
+    chargesEnabled: null,
+    payoutsEnabled: null,
+    requirementsClear: null,
+  };
+
+  if (accountCheckRequired) {
+    try {
+      const account = await stripe.accounts.retrieveCurrent();
+      const accountReadiness = evaluateStripeAccountReadiness(
+        account,
+        expectedStripeAccountId
+      );
+      stripeAccount = {
+        required: true,
+        accountMatches: accountReadiness.accountMatches,
+        chargesEnabled: accountReadiness.chargesEnabled,
+        payoutsEnabled: accountReadiness.payoutsEnabled,
+        requirementsClear: accountReadiness.requirementsClear,
+      };
+
+      if (!accountReadiness.ready) {
+        return failed("stripe_account", {
+          mode,
+          appUrlOk,
+          webhookSecretConfigured,
+          stripeAccount,
+        });
+      }
+    } catch (error) {
+      console.error("[stripe readiness] account check failed:", error);
+      return failed("stripe_account", {
+        mode,
+        appUrlOk,
+        webhookSecretConfigured,
+        stripeAccount,
+      });
+    }
   }
 
   const priceChecks: Partial<Record<(typeof PAID_PLAN_IDS)[number], boolean>> = {};
@@ -153,6 +206,7 @@ export async function GET(request: NextRequest) {
       appUrlOk,
       secretKeyOk: true,
       webhookSecretConfigured,
+      stripeAccount,
       webhookEndpointOk,
       portalConfigurationOk,
       prices,

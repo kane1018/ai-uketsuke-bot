@@ -43,14 +43,18 @@ StripeのAPIキー、Price ID、Webhook signing secret、Customer ID、Subscript
 | Vercel環境変数 | テスト環境 | 本番環境 |
 | --- | --- | --- |
 | `STRIPE_MODE` | `test` | `live` |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 任意（Stripe.js追加時） | 任意（現行Hosted Checkoutでは未使用） |
-| `STRIPE_SECRET_KEY` | `sk_test_...` / `rk_test_...` | `sk_live_...` / `rk_live_...` |
-| `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 本番Endpointの`whsec_...` |
-| `STRIPE_PRICE_LIGHT` | テストPrice ID | `price_1UH4DyFoat2NfwYm8OKM91HT` |
-| `STRIPE_PRICE_STANDARD` | テストPrice ID | `price_1UH4E2Foat2NfwYml6PDoPbT` |
-| `STRIPE_PRICE_PRO` | テストPrice ID | `price_1UH4E5Foat2NfwYmPOUzup37` |
+| `STRIPE_SECRET_KEY` | `sk_test_...` / `rk_test_...` | 使用するliveアカウントの`sk_live_...` / `rk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | テストEndpointの`whsec_...` | 使用するliveアカウントのWebhook secret |
+| `STRIPE_EXPECTED_ACCOUNT_ID` | 空欄可 | 専用アカウント切替時は`acct_1UHDvqGw1L7eOEYg` |
+| `STRIPE_PORTAL_CONFIGURATION_ID` | 任意 | 専用Portalを事前作成した場合のみ設定 |
+| `STRIPE_PRICE_LIGHT` | テストPrice ID | 使用するliveアカウント側の980円Price ID |
+| `STRIPE_PRICE_STANDARD` | テストPrice ID | 使用するliveアカウント側の1,980円Price ID |
+| `STRIPE_PRICE_PRO` | テストPrice ID | 使用するliveアカウント側の3,980円Price ID |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 任意 | 現行Hosted Checkoutでは未使用 |
 
-テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもモードをまたいで利用できません。アプリは`STRIPE_MODE`とSecret keyのprefix、およびWebhook/Subscriptionの`livemode`を照合し、不一致を拒否します。
+テストEndpointのWebhook secretを本番Endpointへ流用しないでください。Price IDもStripeアカウントやモードをまたいで利用できません。アプリは`STRIPE_MODE`とSecret keyのprefix、およびWebhook/Subscriptionの`livemode`を照合し、不一致を拒否します。
+
+専用アカウント切替時は`STRIPE_EXPECTED_ACCOUNT_ID`を必ず設定します。この値がlive環境で設定されている場合、`/api/stripe/readiness`はcurrent accountを取得し、期待アカウントとの一致、`charges_enabled=true`、`payouts_enabled=true`、blockingな`currently_due` / `past_due` / `disabled_reason`がないことまでfail-closedで確認します。restricted keyにはcurrent accountを読み取れる権限を付与します。
 
 ## DBとアプリのtest/live分離
 
@@ -104,10 +108,15 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 法務4ページと料金・解約条件の表示が確定している。
    - Stripe公開ビジネス名、Price、税、Customer Portal、本番Webhookが確定している。
    - 切り替え日時、担当者、テスト金額、返金方法、ロールバック手順が承認されている。
-9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、3つのPrice ID）を同一のliveモード値へまとめて変更する。test/liveの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
-   - 2026-09-19現在、`STRIPE_MODE`、受付Bot専用live restricted key（`rk_live_...`）、Webhook secret、新料金の3つのlive Price ID、`NEXT_PUBLIC_APP_URL` は本番設定済み。
-   - `/api/stripe/readiness` は2026-09-19にもHTTP 200 / `ready:true` を確認済み。Stripe構成上の技術ブロッカーは解消済み。
+9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_EXPECTED_ACCOUNT_ID`、3つのPrice ID）を同一のliveアカウント値へまとめて変更する。test/liveや新旧Stripeアカウントの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
+   - 専用アカウントへ切り替える場合は`STRIPE_EXPECTED_ACCOUNT_ID=acct_1UHDvqGw1L7eOEYg`を同時に設定する。
+   - 専用restricted keyにはcurrent accountのread権限を含める。
+   - 2026-09-19現在のProductionは、`STRIPE_MODE=live`、受付Bot用途restricted key（Showroom ECとの共用Stripeアカウント発行）、Webhook secret、新料金の3つのlive Price ID、`NEXT_PUBLIC_APP_URL`で稼働している。専用アカウント審査完了まではこの構成を維持する。
+   - 共用アカウント構成の`/api/stripe/readiness` は2026-09-19にHTTP 200 / `ready:true` を確認済み。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
+   - 専用アカウント切替後の`/api/stripe/readiness`でHTTP 200 / `ready:true`を確認する。
+   - レスポンスの`stripeAccount.required`、`stripeAccount.accountMatches`、`stripeAccount.chargesEnabled`、`stripeAccount.payoutsEnabled`、`stripeAccount.requirementsClear`がすべて`true`であることを確認する。
+   - いずれかが未達ならHTTP 503 / `failureStage: "stripe_account"`となるため、実決済へ進まず旧Production設定へ戻す。
 11. `/pricing`から少額または実カードでCheckoutを1件確認する。実課金になるため、金額・返金方針・実施担当者を事前承認する。
 12. `/dashboard/billing?success=true`へ戻り、プラン、status、次回更新日を確認する。
 13. `subscriptions`にlive Customer/Subscription/Priceが反映されたことを確認する。
