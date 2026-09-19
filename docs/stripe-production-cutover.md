@@ -19,18 +19,21 @@
 2026-09-19に日本・JPYの独立Stripeアカウントを新規作成し、表示名を「受付Bot」へ設定した。Showroom ECとはデータ・レポートを共有しない個別アカウントとして作成している。
 
 - 専用アカウント: `acct_1UHDvqGw1L7eOEYg`（秘密情報ではない識別子）
-- 本番環境: 未有効化。Stripe onboardingの「事業形態」選択で本人確認待ち。
-- 現在の本人確認待ち項目: 「個人または個人事業主」または「法人」の法的選択。推測で確定しない。
-- 専用アカウントのsandboxには、ライト980円/月、スタンダード1,980円/月、プロ3,980円/月の3商品を作成済み。
-- sandbox Product ID:
-  - Light: `prod_VHo88nklX6zzK3`
-  - Standard: `prod_VHo8TeChFL9O4P`
-  - Pro: `prod_VHo8vsrT61tiz3`
-- Stripe MCPは専用アカウントのsandboxについて必要最小限のカスタム権限まで設定済みだが、最終OAuth承認は本人操作待ち。本番環境はStripe onboarding完了まで選択不可。
+- Stripe onboardingは提出済み。本人確認書類も提出・反映済みで、`details_submitted=true`。
+- 現在はStripeの追加コンプライアンス審査中。2026-09-19時点で `charges_enabled=false` / `payouts_enabled=false` / `requirements.disabled_reason=under_review`。
+- 残るRequirementは `interv_1UHGBRGw1L7eOEYgQl1HOD8Z.other_compliance_inquiry.form` の1件。Stripe Dashboard上の本人確認タスクは完了しており、追加審査の解消まではProductionを切り替えない。
+- 専用アカウントのlive Product / Priceは作成済み。
+  - Light: Product `prod_VHr9DX3YAgwGil` / Price `price_1UHHReGw1L7eOEYgwqq6czjB` / 980円・月次
+  - Standard: Product `prod_VHrAshBdTSMvwy` / Price `price_1UHHS3Gw1L7eOEYgSLY03qEI` / 1,980円・月次
+  - Pro: Product `prod_VHrAwJoLxDdVuM` / Price `price_1UHHSEGw1L7eOEYgCetFeyZ3` / 3,980円・月次
+- 専用Customer Portalは `bpc_1UHHSnGw1L7eOEYgXCqvcIl2` を作成済み。利用規約・プライバシーポリシー・支払い方法変更・請求履歴・期間終了時解約・3プラン間変更を受付Bot専用Priceへ限定して設定している。
+- 専用live Webhook Endpointは `we_1UHHSzGw1L7eOEYgBVOAthvH` を作成済みで、URLは `https://chatbot-support.com/api/stripe/webhook`、必要6イベントを購読する。Signing Secretはリポジトリへ保存しない。切替時に安全に再発行/取得してVercelへ設定する。
+- 専用アカウントのlive環境はStripe MCPへ必要最小限のカスタム権限で接続済み。
 - アプリ側はPR #31/#32でStripeアカウント移行耐性を実装済み。旧アカウントのCustomer IDを新アカウントで再利用せず、Customer PortalのProduct/Priceも環境変数のPriceから動的解決する。
-- 分離準備中も現行Productionは変更せず、`/api/stripe/readiness` がHTTP 200 / `ready:true` の状態を維持する。
+- Vercel ProductionはまだShowroom ECとの共用Stripeアカウントを参照している。審査中の専用アカウントへ部分的に切り替えない。
+- 分離準備中も現行Productionの `/api/stripe/readiness` はHTTP 200 / `ready:true` を維持する。
 
-本番有効化後は、専用アカウントでlive Product/Price、Webhook、Customer Portal、restricted keyを作成・検証し、その一式をVercel Productionへ同時に切り替える。切替成功とreadiness PASSを確認するまで、共用アカウント側の受付Bot設定は停止しない。
+専用アカウントで `charges_enabled=true` になり、必要な入金要件も解消した後に、専用live API key・Webhook signing secret・3つの専用Price IDをVercel Productionへ同一作業で切り替える。再デプロイ後にreadiness PASSと新アカウントでの980円live E2Eを確認するまで、共用アカウント側の受付Bot設定は停止しない。
 
 ## モードを混在させない
 
