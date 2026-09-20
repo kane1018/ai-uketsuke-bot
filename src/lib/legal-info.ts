@@ -5,7 +5,7 @@ export const LEGAL_PRIVATE_ADDRESS_DISCLOSURE =
   "請求により遅滞なく電子メールで開示します。住所の開示を希望する場合は support@chatbot-support.com へご連絡ください。申込みの意思決定前に十分な時間的余裕をもって提供します。";
 
 export const PRIVACY_PRIVATE_ADDRESS_DISCLOSURE =
-  "住所は、本人の求めに応じて遅滞なく回答します。確認を希望する場合は support@chatbot-support.com へご連絡ください。";
+  "住所は公開していません。確認を希望する場合は support@chatbot-support.com へご連絡ください。請求に応じて、申込みの意思決定前に十分な時間的余裕をもって、遅滞なく電子メールで開示します。";
 
 // Replace only the values in this object after the business owner has
 // confirmed them. Do not infer personal or business information from other
