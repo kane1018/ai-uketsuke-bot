@@ -3,16 +3,16 @@
 この文書は、テストモードで検証済みの月額課金をStripe本番モードへ切り替えるための手順です。
 秘密値はリポジトリ、Issue、チャット、スクリーンショットへ貼り付けず、StripeとVercelの管理画面内だけで扱います。
 
-## 2026-09-19 現在の本番状態
+## 2026-09-20 現在の本番状態
 
 - Stripeアカウントは本人確認済みで、カード決済・入金とも有効。追加の必須確認事項はない。
 - 受付Botの3つのlive Priceは有効で、ライト980円、スタンダード1,980円、プロ3,980円、すべてJPY・月次。
 - 本番Webhook Endpointは有効で、必要な6イベントを購読済み。
 - 2026-09-19にライト980円のlive E2Eを1件実施済み。決済成功、Webhook/DB反映、Subscription解約、980円全額返金まで完了し、現在activeなlive subscriptionはない。Supabaseにはこのlive検証履歴が証跡として残っている。
 - 本番 `/api/stripe/readiness` は2026-09-19にHTTP 200 / `ready:true` を再確認済み。live restricted key、新料金の3つのlive Price、Webhook、専用Customer Portal設定の検証がすべてPASSしている。
-- Vercel Productionの `STRIPE_SECRET_KEY` には受付Bot用途のrestricted key（`rk_live_...`）を設定済みだが、現時点ではShowroom ECとの共用Stripeアカウント上で発行したキー。専用Stripeアカウント切替時に新アカウント側のキーへ交換する。
-- 受付Bot専用Customer Portal設定はmetadata `service=ai-uketsuke-bot` / `portal_policy=v2` を持つ設定を自動作成・再利用し、新料金の3 Priceだけをプラン変更先として許可する。2026-09-19に `bpc_1UHAp6Foat2NfwYmbP1lEZux` の作成とreadiness PASSを確認済み。
-- 現在Productionが参照しているStripeアカウントはShowroom ECとの共用状態で、アカウント共通表示・プロフィール・カード明細表記は受付Bot専用ではない。このため専用Stripeアカウントへの分離を進行中。分離完了までは現行Production設定を維持する。
+- Vercel Productionの `STRIPE_SECRET_KEY` は受付Bot専用Stripeアカウント `acct_1UHDvqGw1L7eOEYg` で発行したlive restricted keyへ切り替え済み。
+- 受付Bot専用Customer Portalは `bpc_1UHHSnGw1L7eOEYgXCqvcIl2` をProductionで使用中。新料金の3 Priceだけをプラン変更先として許可し、readinessで設定整合性を確認する。
+- 2026-09-20にProductionをShowroom ECとの共用Stripeアカウントから受付Bot専用Stripeアカウントへ切り替えた。Showroom EC側のアカウント設定は変更していない。
 
 ## 受付Bot専用Stripeアカウントへの分離状況
 
@@ -22,7 +22,7 @@
 - Stripe onboardingは提出済み。本人確認書類も提出・反映済みで、`details_submitted=true`。
 - 2026-09-19、追加コンプライアンスの `other_compliance_inquiry.form`（日本のオンライン決済事業者向けセキュリティチェックリスト）へ回答し、Stripeへ送信済み。回答送信後、Dashboardの「要対応」は「完了すべきアクティブなタスクはありません」に変わった。
 - 提出時点で確認できた実装事実に基づき、セキュリティ対策の実装主体は `Employee(s)`、ログイン対策は `Limited number of login attempts and throttling` と回答した。受付BotはSupabase Authを利用し、アプリ側にはメール/パスワード・Googleログインが存在するため「ログイン機能なし」は選択していない。
-- ユーザー側の追加提出タスクは0件だが、同日22時台の再確認時点では決済関連のステータスはまだ「一時停止」。支払い、Payouts、JCB、Link、MB WAY等が停止対象として残っている。Stripe側の審査・反映が完了して `charges_enabled=true` / `payouts_enabled=true` になるまではProductionを切り替えない。
+- 2026-09-20時点で `charges_enabled=true` / `payouts_enabled=true`、blockingな `currently_due` / `past_due` / `disabled_reason` はない。Dashboardの完了すべきアクティブタスクは0件。通常の支払い・Payouts・JCB・Link・MB WAYは有効で、確認時に一時停止表示だったのはCartes Bancaires決済のみ。
 - 専用アカウントのlive Product / Priceは作成済み。
   - Light: Product `prod_VHr9DX3YAgwGil` / Price `price_1UHHReGw1L7eOEYgwqq6czjB` / 980円・月次
   - Standard: Product `prod_VHrAshBdTSMvwy` / Price `price_1UHHS3Gw1L7eOEYgSLY03qEI` / 1,980円・月次
@@ -31,10 +31,10 @@
 - 専用live Webhook Endpointは `we_1UHHSzGw1L7eOEYgBVOAthvH` を作成済みで、URLは `https://chatbot-support.com/api/stripe/webhook`、必要6イベントを購読する。Signing Secretはリポジトリへ保存しない。切替時に安全に再発行/取得してVercelへ設定する。
 - 専用アカウントのlive環境はStripe MCPへ必要最小限のカスタム権限で接続済み。
 - アプリ側はPR #31/#32でStripeアカウント移行耐性を実装済み。旧アカウントのCustomer IDを新アカウントで再利用せず、Customer PortalのProduct/Priceも環境変数のPriceから動的解決する。
-- Vercel ProductionはまだShowroom ECとの共用Stripeアカウントを参照している。審査中の専用アカウントへ部分的に切り替えない。
-- 分離準備中も現行Productionの `/api/stripe/readiness` はHTTP 200 / `ready:true` を維持する。
+- Vercel Productionは2026-09-20に専用Stripeアカウントへ一括切替済み。Secret key、Webhook secret、Expected Account ID、3つのPrice ID、専用Portal設定を同一デプロイ境界で揃えた。
+- 専用アカウント切替後のProduction `/api/stripe/readiness` はHTTP 200 / `ready:true` を確認済み。
 
-専用アカウントで `charges_enabled=true` になり、必要な入金要件も解消した後に、専用live API key・Webhook signing secret・3つの専用Price IDをVercel Productionへ同一作業で切り替える。再デプロイ後にreadiness PASSと新アカウントでの980円live E2Eを確認するまで、共用アカウント側の受付Bot設定は停止しない。
+2026-09-20に専用live API key・Webhook signing secret・3つの専用Price ID・Expected Account ID・専用Portal設定をVercel Productionへ切り替えた。再デプロイ後のreadinessは全項目PASSし、専用アカウント上でライト980円のlive E2Eを実施した。決済成功後にWebhookがHTTP 200で処理され、Subscriptionを即時解約し980円を全額返金、返金status=`succeeded`まで確認した。
 
 ## モードを混在させない
 
@@ -95,7 +95,7 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
    - 自動作成する専用設定には、利用規約URL `https://chatbot-support.com/terms`、プライバシーポリシーURL `https://chatbot-support.com/privacy`、支払方法変更、請求履歴、期間終了時解約を設定する。
 5. Stripe本番モードのWebhook Endpointを確認する。
    - URL: `https://chatbot-support.com/api/stripe/webhook`
-   - 2026-09-18: 受付Bot用live Webhook Endpoint作成済み（Endpoint ID `we_1UGuk3Foat2NfwYmoT7fdYsT`）。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。旧Endpoint `we_1UGuabFoat2NfwYm3xFYt7cN` は無効化済み。
+   - 専用アカウントのlive Webhook Endpointは `we_1UHHSzGw1L7eOEYgBVOAthvH`。Signing SecretはVercelの `STRIPE_WEBHOOK_SECRET` へ安全に設定済み。
    - イベント:
      - `checkout.session.completed`
      - `customer.subscription.created`
@@ -112,8 +112,8 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 9. Vercel ProductionのStripeサーバー環境変数（`STRIPE_MODE`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_EXPECTED_ACCOUNT_ID`、3つのPrice ID）を同一のliveアカウント値へまとめて変更する。test/liveや新旧Stripeアカウントの値を部分的に混在させない。`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` は現行Hosted Checkoutでは未使用。`STRIPE_PORTAL_CONFIGURATION_ID` は専用設定を事前作成した場合のみ設定し、未設定時はアプリの自動作成を利用する。
    - 専用アカウントへ切り替える場合は`STRIPE_EXPECTED_ACCOUNT_ID=acct_1UHDvqGw1L7eOEYg`を同時に設定する。
    - 専用restricted keyにはcurrent accountのread権限を含める。
-   - 2026-09-19現在のProductionは、`STRIPE_MODE=live`、受付Bot用途restricted key（Showroom ECとの共用Stripeアカウント発行）、Webhook secret、新料金の3つのlive Price ID、`NEXT_PUBLIC_APP_URL`で稼働している。専用アカウント審査完了まではこの構成を維持する。
-   - 共用アカウント構成の`/api/stripe/readiness` は2026-09-19にHTTP 200 / `ready:true` を確認済み。
+   - 2026-09-20現在のProductionは、`STRIPE_MODE=live`、専用アカウントのrestricted key、専用Webhook secret、`STRIPE_EXPECTED_ACCOUNT_ID=acct_1UHDvqGw1L7eOEYg`、専用Portal設定、新料金3つのlive Price ID、`NEXT_PUBLIC_APP_URL`で稼働している。
+   - 専用アカウント構成の`/api/stripe/readiness` は2026-09-20にHTTP 200 / `ready:true`、`stripeAccount.required/accountMatches/chargesEnabled/payoutsEnabled/requirementsClear`すべて`true`を確認済み。
 10. Productionを再デプロイし、deploymentがReadyであることを確認する。
    - 専用アカウント切替後の`/api/stripe/readiness`でHTTP 200 / `ready:true`を確認する。
    - レスポンスの`stripeAccount.required`、`stripeAccount.accountMatches`、`stripeAccount.chargesEnabled`、`stripeAccount.payoutsEnabled`、`stripeAccount.requirementsClear`がすべて`true`であることを確認する。
@@ -152,9 +152,9 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 - [ ] 住所の請求時開示方式を含む特商法表示について、事業者本人または専門家が最終確認
 - [x] Stripe Checkout上部の表示名はSession単位で「受付Bot」に上書き
 - [x] 受付Botの3つのlive Productにsubscription用明細表記 `UKETSUKE BOT` を設定
-- [ ] 受付Bot専用Stripeアカウントの本番有効化と切替を完了し、領収書・Customer Portal・カード明細の受付Bot向け表示を最終確認
-  - Showroom ECとの共用アカウントは変更せず、受付Bot専用アカウントへ分離する方針を確定済み。
-  - 本人確認・onboarding・追加セキュリティチェックリストのユーザー側提出は完了済み。Dashboardのアクティブタスクは0件で、Stripe側の決済停止解除後にProductionを切り替える。
+- [x] 受付Bot専用Stripeアカウントの本番有効化とProduction切替を完了
+  - Showroom ECとの共用アカウントは変更せず、受付Bot専用アカウントへ分離済み。
+  - 本人確認・onboarding・追加セキュリティチェックリストは完了済み。Dashboardのアクティブタスクは0件で、Production切替後のlive決済・解約・返金E2EもPASS。
 - [ ] `/terms`、`/privacy`、`/legal`、`/refund-policy`の事業者本人または専門家による最終確認
 
 販売価格、商品代金以外の必要料金、支払方法、支払時期、サービス提供時期、解約方法、返金条件、動作環境は同ファイルの`LEGAL_DISCLOSURE_ITEMS`に集約しています。実課金開始前に、実際の運用・Stripe設定と一致していることを再確認してください。
@@ -177,6 +177,19 @@ liveへ切り替えた直後、live subscriptionがまだないユーザーは�
 法務文面は事業形態・販売地域・対象顧客により要件が変わるため、公開前に専門家へ確認してください。
 
 ## 切り替え後の記録
+
+### 2026-09-20 専用Stripeアカウント本番切替
+
+- Production Stripe account: `acct_1UHDvqGw1L7eOEYg`
+- Portal configuration: `bpc_1UHHSnGw1L7eOEYgXCqvcIl2`
+- Webhook Endpoint: `we_1UHHSzGw1L7eOEYgBVOAthvH`
+- Light / Standard / Pro Priceは専用アカウントの980円 / 1,980円 / 3,980円 live monthly Priceへ切替済み。
+- 切替後の `/api/stripe/readiness` はHTTP 200 / `ready:true`。account一致、charges、payouts、requirements、Webhook、Portal、3 Priceの全チェックがPASS。
+- 専用アカウント上でライト980円のlive Checkoutを実施。決済直後のWebhook 3件はすべてHTTP 200。
+- E2E Subscriptionは即時解約し、980円を全額返金。実行結果は `subscriptionStatus=canceled` / `amountRefunded=980` / `refundStatus=succeeded`。
+- 解約後のStripe WebhookもHTTP 200で処理され、アプリ側へ同期済み。
+- E2E専用の一時クリーンアップAPIと一時認証トークンは実行後に削除し、通常Productionへ戻す。
+
 
 - 切り替え日時、担当者、Vercel deployment URLを記録する。
 - 使用したPrice IDとWebhook Endpoint IDを記録する（秘密値は記録しない）。
