@@ -9,6 +9,11 @@ export type SubscriptionStatus =
   | "unpaid"
   | "none";
 
+export const LIGHT_TRIAL_DAYS = 30;
+// The launch cutoff prevents pre-campaign accounts from receiving a retroactive trial.
+// Accounts created on/after this UTC date receive exactly 30 * 24 hours of Light access.
+export const LIGHT_TRIAL_LAUNCH_AT = "2026-09-20T00:00:00.000Z";
+
 export interface PlanDefinition {
   id: PlanId;
   name: string;
@@ -73,4 +78,21 @@ export function isPlanId(value: unknown): value is PlanId {
 
 export function hasPaidAccess(status: SubscriptionStatus) {
   return status === "active" || status === "trialing" || status === "past_due";
+}
+
+export function getLightTrialEndsAt(profileCreatedAt: string | null | undefined) {
+  if (!profileCreatedAt) return null;
+  const startedAt = Date.parse(profileCreatedAt);
+  const launchAt = Date.parse(LIGHT_TRIAL_LAUNCH_AT);
+  if (!Number.isFinite(startedAt) || startedAt < launchAt) return null;
+  return new Date(startedAt + LIGHT_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+export function isLightTrialActive(
+  trialEndsAt: string | null | undefined,
+  now: Date = new Date()
+) {
+  if (!trialEndsAt) return false;
+  const end = Date.parse(trialEndsAt);
+  return Number.isFinite(end) && end > now.getTime();
 }

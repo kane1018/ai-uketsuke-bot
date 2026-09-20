@@ -8,10 +8,12 @@ export function PricingAction({
   plan,
   loggedIn,
   isCurrent,
+  isTrialCurrent = false,
 }: {
   plan: PlanId;
   loggedIn: boolean;
   isCurrent: boolean;
+  isTrialCurrent?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -76,7 +78,13 @@ export function PricingAction({
         onClick={requestCheckout}
         disabled={loading || isCurrent}
       >
-        {isCurrent ? "現在のプラン" : loading ? "準備中..." : "このプランを選ぶ"}
+        {isTrialCurrent
+          ? "30日無料体験中"
+          : isCurrent
+            ? "現在のプラン"
+            : loading
+              ? "準備中..."
+              : "このプランを選ぶ"}
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 

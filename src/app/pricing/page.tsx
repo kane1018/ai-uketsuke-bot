@@ -18,7 +18,14 @@ export default async function PricingPage({
     data: { user },
   } = await supabase.auth.getUser();
   let currentPlan: PlanId = "free";
-  if (user) currentPlan = (await getEffectivePlan(user.id)).planId;
+  let trialActive = false;
+  let trialEndsAt: string | null = null;
+  if (user) {
+    const effective = await getEffectivePlan(user.id);
+    currentPlan = effective.planId;
+    trialActive = effective.accessSource === "light_trial";
+    trialEndsAt = effective.trial.endsAt;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -45,8 +52,16 @@ export default async function PricingPage({
         <div className="text-center">
           <h1 className="text-3xl font-bold sm:text-4xl">シンプルな月額プラン</h1>
           <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-            まずは無料で試し、必要なBot数や機能に合わせてアップグレードできます。
+            新規登録から30日間、ライトプランの機能を無料でお試しいただけます。
           </p>
+          <p className="mx-auto mt-2 max-w-3xl text-sm font-semibold text-brand-700">
+            クレジットカード登録不要・自動課金なし。30日後は自動で無料プランに戻ります。
+          </p>
+          {trialActive && trialEndsAt && (
+            <p className="mx-auto mt-2 max-w-3xl text-sm text-green-700">
+              現在ライトプラン無料体験中です。無料体験終了日：{formatDate(trialEndsAt)}
+            </p>
+          )}
           <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-gray-600">
             有料プランは1か月単位で、解約するまで1か月ごとに自動更新されます。
             表示価格が実際の支払総額で、これに消費税等を別途加算しません。
@@ -99,7 +114,12 @@ export default async function PricingPage({
                     <li key={feature}>✓ {feature}</li>
                   ))}
                 </ul>
-                <PricingAction plan={id} loggedIn={Boolean(user)} isCurrent={currentPlan === id} />
+                <PricingAction
+                  plan={id}
+                  loggedIn={Boolean(user)}
+                  isCurrent={currentPlan === id}
+                  isTrialCurrent={trialActive && id === "light"}
+                />
               </section>
             );
           })}
@@ -116,6 +136,13 @@ export default async function PricingPage({
       <LegalFooter />
     </div>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    dateStyle: "medium",
+    timeZone: "Asia/Tokyo",
+  }).format(new Date(value));
 }
 
 function Limit({ label, value }: { label: string; value: string }) {

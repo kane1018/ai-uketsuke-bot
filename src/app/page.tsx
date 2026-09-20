@@ -131,7 +131,7 @@ export default async function LandingPage({
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="text-2xl font-bold">今すぐ無料で始めましょう</h2>
           <p className="mt-2 text-brand-100">
-            クレジットカード不要。すぐにBotを作成できます。
+            クレジットカード不要・自動課金なし。30日間ライト機能を無料で試せます。
           </p>
           <Link
             href="/signup"

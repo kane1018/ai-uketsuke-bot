@@ -26,7 +26,8 @@ export default async function BillingPage({
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { plan, subscription, usage } = await getBillingOverview(user.id);
+  const { plan, subscription, usage, trial, accessSource } = await getBillingOverview(user.id);
+  const isLightTrial = accessSource === "light_trial";
 
   return (
     <div className="space-y-6">
@@ -49,6 +50,15 @@ export default async function BillingPage({
         </div>
       )}
 
+      {isLightTrial && trial.endsAt && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm leading-6 text-green-800">
+          ライトプランを30日間無料で体験中です。クレジットカード登録は不要で、
+          自動課金されません。{formatDate(trial.endsAt)}の体験終了後は自動的に
+          無料プランへ戻ります。継続する場合は、体験終了後にライトプランへ
+          お申し込みください。
+        </div>
+      )}
+
       {usage.bots > plan.botLimit && (
         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
           現在{usage.bots.toLocaleString()}個のBotがあり、現在のプラン上限
@@ -62,10 +72,19 @@ export default async function BillingPage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm text-gray-500">現在のプラン</p>
-            <p className="mt-1 text-2xl font-bold">{plan.name}</p>
-            <p className="mt-1 text-sm text-gray-600">
-              ステータス: {STATUS_LABELS[subscription?.status ?? "none"]}
+            <p className="mt-1 text-2xl font-bold">
+              {plan.name}{isLightTrial ? "（30日無料体験）" : ""}
             </p>
+            <p className="mt-1 text-sm text-gray-600">
+              ステータス: {isLightTrial
+                ? "無料体験中（カード不要・自動課金なし）"
+                : STATUS_LABELS[subscription?.status ?? "none"]}
+            </p>
+            {isLightTrial && trial.endsAt && (
+              <p className="mt-1 text-sm text-gray-600">
+                無料体験終了日: {formatDate(trial.endsAt)}
+              </p>
+            )}
             {subscription?.current_period_end && (
               <p className="mt-1 text-sm text-gray-600">
                 {subscription.cancel_at_period_end ? "利用終了日" : "次回更新日"}: {formatDate(subscription.current_period_end)}
@@ -95,7 +114,9 @@ function UsageCard({ label, used, limit }: { label: string; used: number; limit:
         <p className="mt-1 text-2xl font-bold">
           {used.toLocaleString()}件 <span className="text-sm font-normal text-gray-400">/ 無制限</span>
         </p>
-        <p className="mt-3 text-xs text-gray-500">有料プランでは月間回答数を制限しません。</p>
+        <p className="mt-3 text-xs text-gray-500">
+          ライトプラン以上では月間回答数を制限しません。
+        </p>
       </div>
     );
   }

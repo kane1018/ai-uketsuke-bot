@@ -76,7 +76,10 @@ export default function SignupPage() {
         <div className="card p-6 sm:p-8">
           <h1 className="text-xl font-bold">新規登録</h1>
           <p className="mt-1 text-sm text-gray-500">
-            無料でアカウントを作成します
+            登録後30日間、ライトプランを無料で利用できます
+          </p>
+          <p className="mt-2 text-xs leading-5 text-gray-500">
+            クレジットカード登録不要・自動課金なし。30日後は自動で無料プランに戻ります。
           </p>
 
           {error && (

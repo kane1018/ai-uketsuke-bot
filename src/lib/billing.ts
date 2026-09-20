@@ -2,8 +2,11 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  LIGHT_TRIAL_DAYS,
   PLANS,
+  getLightTrialEndsAt,
   hasPaidAccess,
+  isLightTrialActive,
   isPlanId,
   type PlanId,
   type SubscriptionStatus,
@@ -31,6 +34,15 @@ export interface UsageSnapshot {
   responses: number;
 }
 
+export interface LightTrialRecord {
+  startedAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  durationDays: number;
+}
+
+export type PlanAccessSource = "paid" | "light_trial" | "free";
+
 function monthStartIso() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -56,16 +68,45 @@ export async function getSubscription(userId: string, stripeMode = getStripeMode
   return (data ?? null) as SubscriptionRecord | null;
 }
 
+export async function getLightTrial(userId: string): Promise<LightTrialRecord> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("profiles")
+    .select("created_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to load light trial: ${error.message}`);
+
+  const startedAt = data?.created_at ?? null;
+  const endsAt = getLightTrialEndsAt(startedAt);
+  return {
+    startedAt,
+    endsAt,
+    active: isLightTrialActive(endsAt),
+    durationDays: LIGHT_TRIAL_DAYS,
+  };
+}
+
 export async function getEffectivePlan(userId: string) {
-  const subscription = await getSubscription(userId);
+  const [subscription, trial] = await Promise.all([
+    getSubscription(userId),
+    getLightTrial(userId),
+  ]);
   const storedPlan = subscription?.plan;
   const status = subscription?.status ?? "none";
-  const planId: PlanId =
+  const paidPlanId: PlanId | null =
     storedPlan && isPlanId(storedPlan) && storedPlan !== "free" && hasPaidAccess(status)
       ? storedPlan
+      : null;
+  const accessSource: PlanAccessSource = paidPlanId
+    ? "paid"
+    : trial.active
+      ? "light_trial"
       : "free";
+  const planId: PlanId = paidPlanId ?? (trial.active ? "light" : "free");
 
-  return { planId, plan: PLANS[planId], subscription };
+  return { planId, plan: PLANS[planId], subscription, trial, accessSource };
 }
 
 export async function getUsageSnapshot(userId: string): Promise<UsageSnapshot> {

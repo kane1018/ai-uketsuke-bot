@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getSubscription } from "@/lib/billing";
+import { getEffectivePlan } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
 import { hasPendingLegalBusinessInfo } from "@/lib/legal-info";
 import {
@@ -44,7 +44,19 @@ export async function POST(request: NextRequest) {
 
     const priceId = getPriceId(plan);
     const selectedPlan = PLANS[plan];
-    const existing = await getSubscription(user.id, stripeMode);
+    const effectivePlan = await getEffectivePlan(user.id);
+    const existing = effectivePlan.subscription;
+
+    if (plan === "light" && effectivePlan.accessSource === "light_trial") {
+      return jsonError(
+        "ライトプランの30日無料体験中です。自動課金はされません。無料体験終了後、継続する場合にライトプランへお申し込みください。",
+        409,
+        {
+          trialActive: true,
+          trialEndsAt: effectivePlan.trial.endsAt,
+        }
+      );
+    }
 
     const validCustomerId = await getValidStripeCustomerId(
       existing?.stripe_customer_id
