@@ -46,17 +46,17 @@ export default async function BotOverviewPage({
         <ActionCard
           href={`/dashboard/bots/${bot.id}/preview`}
           icon="👀"
-          label="プレビュー"
+          label="動作確認"
         />
         <ActionCard
           href={`/dashboard/bots/${bot.id}/publish`}
           icon="🚀"
-          label="公開設定"
+          label="公開・設置"
         />
         <ActionCard
           href={`/dashboard/bots/${bot.id}/responses`}
           icon="📥"
-          label={`回答ログ (${responseCount ?? 0})`}
+          label={`届いた回答 (${responseCount ?? 0})`}
         />
       </div>
 
@@ -85,24 +85,25 @@ export default async function BotOverviewPage({
             まだ公開されていません
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            質問を確認したら「公開設定」から公開しましょう。
+            質問を確認したら「公開・設置」から公開しましょう。
           </p>
           <Link
             href={`/dashboard/bots/${bot.id}/publish`}
             className="btn-primary mt-3"
           >
-            公開設定へ
+            公開・設置へ
           </Link>
         </div>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">基本情報</h2><Link href={`/dashboard/bots/${bot.id}/settings`} className="btn-secondary">会社名・通知先などを編集</Link></div>
       {/* Summary */}
       <div className="card divide-y divide-gray-100">
         <Row label="質問数" value={`${questionCount ?? 0} 問`} />
         <Row label="会社名・屋号" value={bot.company_name || "—"} />
         <Row label="サービス説明" value={bot.service_description || "—"} />
         <Row label="受付したい内容" value={bot.intake_goal || "—"} />
-        <Row label="最終誘導 (CTA)" value={bot.final_cta || "—"} />
+        <Row label="回答後に伝える案内" value={bot.final_cta || "—"} />
         <Row label="通知先メール" value={bot.notification_email || "—"} />
       </div>
     </div>

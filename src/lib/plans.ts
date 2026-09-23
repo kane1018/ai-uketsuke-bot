@@ -80,19 +80,20 @@ export function hasPaidAccess(status: SubscriptionStatus) {
   return status === "active" || status === "trialing" || status === "past_due";
 }
 
-export function getLightTrialEndsAt(profileCreatedAt: string | null | undefined) {
-  if (!profileCreatedAt) return null;
-  const startedAt = Date.parse(profileCreatedAt);
-  const launchAt = Date.parse(LIGHT_TRIAL_LAUNCH_AT);
-  if (!Number.isFinite(startedAt) || startedAt < launchAt) return null;
-  return new Date(startedAt + LIGHT_TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+// Use only the server-controlled Auth creation timestamp, never editable profile data.
+export function getLightTrialEndsAt(accountCreatedAt: string | null | undefined, now: Date = new Date()) {
+  if (!accountCreatedAt) return null;
+  const startedAt = Date.parse(accountCreatedAt);
+  const end = startedAt + LIGHT_TRIAL_DAYS * 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(startedAt) || startedAt < Date.parse(LIGHT_TRIAL_LAUNCH_AT) || startedAt > now.getTime() || !Number.isFinite(new Date(end).getTime())) return null;
+  return new Date(end).toISOString();
 }
-
-export function isLightTrialActive(
-  trialEndsAt: string | null | undefined,
-  now: Date = new Date()
-) {
+export function isLightTrialActive(trialEndsAt: string | null | undefined, now: Date = new Date()) {
   if (!trialEndsAt) return false;
   const end = Date.parse(trialEndsAt);
-  return Number.isFinite(end) && end > now.getTime();
+  return Number.isFinite(end) && end > now.getTime() && end <= now.getTime() + LIGHT_TRIAL_DAYS * 86400000;
+}
+export function resolvePlanAccess(storedPlan: unknown, status: SubscriptionStatus, trialActive: boolean): { planId: PlanId; accessSource: "paid" | "light_trial" | "free" } {
+  if (isPlanId(storedPlan) && storedPlan !== "free" && hasPaidAccess(status)) return { planId: storedPlan, accessSource: "paid" };
+  return trialActive ? { planId: "light", accessSource: "light_trial" } : { planId: "free", accessSource: "free" };
 }

@@ -1,341 +1,52 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { PURPOSES, INDUSTRIES } from "@/lib/constants";
-import { botBasicInfoSchema } from "@/lib/validations";
-import { buildBotTemplate } from "@/lib/bot-templates";
+import { redirect } from "next/navigation";
+import { NewBotWizard } from "@/components/NewBotWizard";
+import { getEffectivePlan } from "@/lib/billing";
+import { INDUSTRIES, PURPOSES } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/server";
 
-type Step = 1 | 2 | 3;
+export const dynamic = "force-dynamic";
 
-export default function NewBotWizard() {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
-
-  const [purpose, setPurpose] = useState<string>("");
-  const [industry, setIndustry] = useState<string>("");
-  const [form, setForm] = useState({
-    name: "",
-    company_name: "",
-    service_description: "",
-    intake_goal: "",
-    final_cta: "",
-    notification_email: "",
-  });
-
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [progress, setProgress] = useState<string>("");
-  const [upgradeRequired, setUpgradeRequired] = useState(false);
-
-  function update(key: keyof typeof form, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleCreate() {
-    setError(null);
-    setUpgradeRequired(false);
-
-    const payload = { purpose, industry, ...form };
-    const parsed = botBasicInfoSchema.safeParse(payload);
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "入力内容を確認してください");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      // 1) Create the bot (draft).
-      setProgress("Botを作成しています...");
-      const createRes = await fetch("/api/bots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      });
-      const created = await createRes.json();
-      if (!createRes.ok) {
-        setUpgradeRequired(Boolean(created.upgradeRequired));
-        throw new Error(created.error || "Botの作成に失敗しました");
-      }
-      const botId: string = created.bot.id;
-
-      // 2) Build a deterministic template from the selected purpose/industry.
-      setProgress("受付テンプレートを準備しています...");
-      const plan = buildBotTemplate(parsed.data);
-      setProgress("質問項目を保存しています...");
-      const saveRes = await fetch(`/api/bots/${botId}/questions`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questions: plan.questions,
-          opening_message: plan.opening_message ?? "",
-          completion_message: plan.completion_message ?? "",
-          cta_message: plan.cta_message ?? "",
-        }),
-      });
-      const saved = await saveRes.json();
-      if (!saveRes.ok) {
-        router.push(
-          `/dashboard/bots/${botId}/edit?setupError=${encodeURIComponent(
-            saved.error || "テンプレートの保存に失敗しました"
-          )}`
-        );
-        return;
-      }
-
-      router.push(`/dashboard/bots/${botId}/edit?template=1`);
-    } catch (err) {
-      setSubmitting(false);
-      setProgress("");
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-2xl">
-      {/* Stepper */}
-      <div className="mb-6 flex items-center gap-2">
-        {[1, 2, 3].map((n) => (
-          <div key={n} className="flex flex-1 items-center gap-2">
-            <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                step >= (n as Step)
-                  ? "bg-brand-600 text-white"
-                  : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {n}
-            </div>
-            {n < 3 && (
-              <div
-                className={`h-0.5 flex-1 ${
-                  step > (n as Step) ? "bg-brand-600" : "bg-gray-200"
-                }`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          <p>{error}</p>
-          {upgradeRequired && (
-            <Link href="/pricing" className="mt-2 inline-block font-semibold underline">
-              プランを確認する
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* Step 1: Purpose */}
-      {step === 1 && (
-        <section>
-          <h1 className="text-lg font-bold">① 目的を選んでください</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Botで何をしたいですか？
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {PURPOSES.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setPurpose(p.value)}
-                className={`card flex items-start gap-3 p-4 text-left transition-all ${
-                  purpose === p.value
-                    ? "ring-2 ring-brand-500"
-                    : "hover:border-brand-300"
-                }`}
-              >
-                <span className="text-2xl">{p.icon}</span>
-                <span>
-                  <span className="block font-semibold">{p.label}</span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    {p.description}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-6 flex justify-between">
-            <Link href="/dashboard/bots" className="btn-ghost">
-              キャンセル
-            </Link>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!purpose}
-              onClick={() => setStep(2)}
-            >
-              次へ
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Step 2: Industry */}
-      {step === 2 && (
-        <section>
-          <h1 className="text-lg font-bold">② 業種を選んでください</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            あなたの業種に合った受付テンプレートを用意します
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {INDUSTRIES.map((i) => (
-              <button
-                key={i.value}
-                type="button"
-                onClick={() => setIndustry(i.value)}
-                className={`card flex items-start gap-3 p-4 text-left transition-all ${
-                  industry === i.value
-                    ? "ring-2 ring-brand-500"
-                    : "hover:border-brand-300"
-                }`}
-              >
-                <span className="text-2xl">{i.icon}</span>
-                <span>
-                  <span className="block font-semibold">{i.label}</span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
-                    {i.description}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-6 flex justify-between">
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setStep(1)}
-            >
-              戻る
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={!industry}
-              onClick={() => setStep(3)}
-            >
-              次へ
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Step 3: Basic info */}
-      {step === 3 && (
-        <section>
-          <h1 className="text-lg font-bold">③ 基本情報を入力</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            入力内容をもとに受付テンプレートを整えます
-          </p>
-
-          <div className="mt-4 space-y-4">
-            <Field label="Bot名" required>
-              <input
-                className="input"
-                placeholder="例：無料相談受付Bot"
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-              />
-            </Field>
-            <Field label="会社名・屋号">
-              <input
-                className="input"
-                placeholder="例：山田行政書士事務所"
-                value={form.company_name}
-                onChange={(e) => update("company_name", e.target.value)}
-              />
-            </Field>
-            <Field label="サービス説明">
-              <textarea
-                className="input min-h-[80px]"
-                placeholder="例：相続・遺言に関する手続きの代行を行っています。"
-                value={form.service_description}
-                onChange={(e) =>
-                  update("service_description", e.target.value)
-                }
-              />
-            </Field>
-            <Field label="受付したい内容">
-              <textarea
-                className="input min-h-[80px]"
-                placeholder="例：相談内容、希望日時、連絡先を聞きたい"
-                value={form.intake_goal}
-                onChange={(e) => update("intake_goal", e.target.value)}
-              />
-            </Field>
-            <Field label="最終誘導（CTA）">
-              <input
-                className="input"
-                placeholder="例：担当者より2営業日以内にご連絡します"
-                value={form.final_cta}
-                onChange={(e) => update("final_cta", e.target.value)}
-              />
-            </Field>
-            <Field label="通知先メールアドレス" required>
-              <input
-                className="input"
-                type="email"
-                placeholder="例：info@example.com"
-                value={form.notification_email}
-                onChange={(e) =>
-                  update("notification_email", e.target.value)
-                }
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                新しい回答が届いたら、このアドレスに通知します
-              </p>
-            </Field>
-          </div>
-
-          <div className="mt-6 flex justify-between">
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setStep(2)}
-              disabled={submitting}
-            >
-              戻る
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleCreate}
-              disabled={submitting}
-            >
-              {submitting ? progress || "作成中..." : "テンプレートから作成する"}
-            </button>
-          </div>
-
-          {submitting && (
-            <p className="mt-3 text-center text-sm text-brand-600">
-              {progress}しばらくお待ちください…
-            </p>
-          )}
-        </section>
-      )}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  required,
-  children,
+export default async function NewBotPage({
+  searchParams,
 }: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
+  searchParams: Promise<{ purpose?: string | string[]; industry?: string | string[] }>;
 }) {
-  return (
-    <div>
-      <label className="label">
-        {label}
-        {required && <span className="ml-1 text-red-500">*</span>}
-      </label>
-      {children}
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const [{ plan }, bots, query] = await Promise.all([
+    getEffectivePlan(user.id),
+    supabase.from("bots").select("id, name", { count: "exact" })
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
+    searchParams,
+  ]);
+  if (bots.error || bots.count === null) {
+    return <div className="card mx-auto max-w-2xl space-y-3 p-6">
+      <h1 className="text-xl font-bold">作成可能な数を確認できませんでした</h1>
+      <p className="text-sm text-gray-600">時間をおいてページを再読み込みしてください。</p>
+      <Link href="/dashboard/bots" className="btn-secondary">Bot一覧に戻る</Link>
+    </div>;
+  }
+  const full = bots.count >= plan.botLimit;
+  const purpose = PURPOSES.find((item) => item.value === query.purpose)?.value;
+  const industry = INDUSTRIES.find((item) => item.value === query.industry)?.value;
+
+  return <div className="mx-auto max-w-2xl space-y-6">
+    <div className="card space-y-2 p-4 text-sm">
+      <p className="font-semibold">{plan.name}プラン：{bots.count} / {plan.botLimit}個のBotを利用中</p>
+      <p className="text-gray-600">{full ? "作成数の上限に達しています。既存のBotを編集して、受付の準備を続けられます。" : `あと${plan.botLimit - bots.count}個作成できます。まずは下書きとして作成します。`}</p>
     </div>
-  );
+    {full ? <section className="card space-y-4 p-6">
+      <h1 className="text-xl font-bold">既存のBotから続ける</h1>
+      <ul className="space-y-2">{bots.data?.map((bot) => <li key={bot.id}>
+        <Link href={`/dashboard/bots/${bot.id}/edit`} className="block rounded-lg border border-gray-200 px-4 py-3 font-medium text-brand-700 hover:bg-brand-50">{bot.name || "名前未設定のBot"} を編集 →</Link>
+      </li>)}</ul>
+      <div className="flex flex-wrap gap-3">
+        <Link href="/dashboard/bots" className="btn-secondary">Bot一覧を見る</Link>
+        <Link href="/pricing" className="btn-ghost">作成数を増やすプランを見る</Link>
+      </div>
+    </section> : <NewBotWizard defaultEmail={user.email ?? ""} initialPurpose={purpose} initialIndustry={industry} />}
+  </div>;
 }

@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import Link from "next/link";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { QUESTION_TYPES, questionTypeHasOptions } from "@/lib/constants";
 import { questionsSaveSchema } from "@/lib/validations";
@@ -23,7 +22,7 @@ function newKey() {
 
 function toDraft(q: BotQuestion): DraftQuestion {
   return {
-    key: newKey(),
+    key: `q_${q.id}`,
     question_text: q.question_text,
     question_type: q.question_type,
     options: q.options ?? [],
@@ -39,6 +38,58 @@ interface Props {
   initialCta: string;
 }
 
+// Only attach departure guards while there are actual unsaved changes.
+export function useUnsavedChanges(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) return;
+    function beforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    function beforeNavigate(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLAnchorElement) || (link.target && link.target !== "_self") || link.hasAttribute("download")) return;
+      const destination = new URL(link.href, window.location.href);
+      if (destination.origin !== window.location.origin || (destination.pathname === window.location.pathname && destination.search === window.location.search)) return;
+      if (!window.confirm("未保存の変更があります。変更を破棄して移動しますか？")) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
+    // Modern browsers also expose cancellable same-document back/forward navigation.
+    // Keep the link and beforeunload guards for browsers without this API.
+    const navigation = (window as Window & { navigation?: EventTarget }).navigation;
+    function beforeHistoryNavigate(event: Event) {
+      const traversal = event as Event & {
+        navigationType?: string;
+        destination?: { url: string; sameDocument: boolean };
+      };
+      if (traversal.navigationType !== "traverse" || !traversal.cancelable || !traversal.destination?.sameDocument) return;
+      const destination = new URL(traversal.destination.url);
+      if (destination.origin !== window.location.origin || (destination.pathname === window.location.pathname && destination.search === window.location.search)) return;
+      if (!window.confirm("未保存の変更があります。変更を破棄して移動しますか？")) event.preventDefault();
+    }
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", beforeNavigate, true);
+    navigation?.addEventListener("navigate", beforeHistoryNavigate);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", beforeNavigate, true);
+      navigation?.removeEventListener("navigate", beforeHistoryNavigate);
+    };
+  }, [dirty]);
+}
+
+function snapshot(questions: DraftQuestion[], opening: string, completion: string, cta: string) {
+  return JSON.stringify({
+    questions: questions.map((q) => ({
+      question_text: q.question_text, question_type: q.question_type,
+      options: q.options, is_required: q.is_required,
+    })), opening, completion, cta,
+  });
+}
+
 function EditorInner(props: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,12 +97,16 @@ function EditorInner(props: Props) {
   const justPrepared = searchParams.get("template") === "1";
 
   const [questions, setQuestions] = useState<DraftQuestion[]>(
-    props.initialQuestions.map(toDraft)
+    () => props.initialQuestions.map(toDraft)
   );
   const [opening, setOpening] = useState(props.initialOpening);
   const [completion, setCompletion] = useState(props.initialCompletion);
   const [cta, setCta] = useState(props.initialCta);
 
+  const [savedSnapshot, setSavedSnapshot] = useState(() => snapshot(questions, opening, completion, cta));
+  const dirty = snapshot(questions, opening, completion, cta) !== savedSnapshot;
+  useUnsavedChanges(dirty);
+  const saveLock = useRef(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -121,7 +176,9 @@ function EditorInner(props: Props) {
     );
   }
 
-  async function handleSave() {
+  async function handleSave(preview = false) {
+    if (saveLock.current) return;
+    if (preview && !dirty) { router.push(`/dashboard/bots/${props.botId}/preview`); return; }
     setMessage(null);
 
     const payload = {
@@ -148,6 +205,7 @@ function EditorInner(props: Props) {
       return;
     }
 
+    saveLock.current = true;
     setSaving(true);
     try {
       const res = await fetch(`/api/bots/${props.botId}/questions`, {
@@ -157,7 +215,17 @@ function EditorInner(props: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "保存に失敗しました");
+      const savedQuestions = parsed.data.questions.map((q, index) => ({ ...q, key: questions[index].key }));
+      const savedOpening = parsed.data.opening_message ?? "";
+      const savedCompletion = parsed.data.completion_message ?? "";
+      const savedCta = parsed.data.cta_message ?? "";
+      setQuestions(savedQuestions);
+      setOpening(savedOpening);
+      setCompletion(savedCompletion);
+      setCta(savedCta);
+      setSavedSnapshot(snapshot(savedQuestions, savedOpening, savedCompletion, savedCta));
       setMessage({ type: "success", text: "保存しました" });
+      if (preview) router.push(`/dashboard/bots/${props.botId}/preview`);
       router.refresh();
     } catch (err) {
       setMessage({
@@ -165,19 +233,21 @@ function EditorInner(props: Props) {
         text: err instanceof Error ? err.message : "保存に失敗しました",
       });
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" aria-busy={saving}>
       {justPrepared && !setupError && questions.length > 0 && (
         <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
           ✓ 受付テンプレートを準備しました。必要に応じて質問を編集してください。
         </div>
       )}
-      {message && (
+      {message && (message.type === "error" || !dirty) && (
         <div
+          role={message.type === "error" ? "alert" : "status"}
           className={`rounded-lg px-3 py-2 text-sm ${
             message.type === "success"
               ? "bg-green-50 text-green-700"
@@ -188,34 +258,45 @@ function EditorInner(props: Props) {
         </div>
       )}
 
+      <p role="status" className={`text-sm font-medium ${dirty ? "text-amber-700" : "text-gray-600"}`}>
+        {saving ? "保存中です…" : dirty ? "未保存の変更があります" : "すべての変更を保存済みです"}
+      </p>
+      <fieldset disabled={saving} className="min-w-0 space-y-5">
+      <legend className="sr-only">受付の質問と案内を編集</legend>
       {/* Chat copy */}
       <details className="card p-4" open>
         <summary className="cursor-pointer text-sm font-semibold">
-          チャットの文言（あいさつ・完了・CTA）
+          あいさつ・回答後の案内を編集
         </summary>
         <div className="mt-4 space-y-3">
           <div>
-            <label className="label">最初のあいさつ</label>
+            <label htmlFor="questions-opening" className="label">最初のあいさつ</label>
             <textarea
               className="input min-h-[60px]"
+              id="questions-opening"
+              maxLength={1000}
               value={opening}
               onChange={(e) => setOpening(e.target.value)}
               placeholder="例：こんにちは！ご相談内容をお聞かせください。"
             />
           </div>
           <div>
-            <label className="label">完了メッセージ</label>
+            <label htmlFor="questions-completion" className="label">回答完了時のお礼</label>
             <textarea
               className="input min-h-[60px]"
+              id="questions-completion"
+              maxLength={1000}
               value={completion}
               onChange={(e) => setCompletion(e.target.value)}
               placeholder="例：ご回答ありがとうございました。"
             />
           </div>
           <div>
-            <label className="label">最終誘導（CTA）</label>
+            <label htmlFor="questions-followup" className="label">回答後の連絡・次の手順</label>
             <textarea
               className="input min-h-[60px]"
+              id="questions-followup"
+              maxLength={1000}
               value={cta}
               onChange={(e) => setCta(e.target.value)}
               placeholder="例：担当者より2営業日以内にご連絡いたします。"
@@ -250,8 +331,8 @@ function EditorInner(props: Props) {
                   type="button"
                   onClick={() => move(q.key, -1)}
                   disabled={idx === 0}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"
-                  aria-label="上へ"
+                  className="grid min-h-[44px] min-w-[44px] place-items-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+                  aria-label={`質問 ${idx + 1} を上へ移動`}
                 >
                   ↑
                 </button>
@@ -259,16 +340,16 @@ function EditorInner(props: Props) {
                   type="button"
                   onClick={() => move(q.key, 1)}
                   disabled={idx === questions.length - 1}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30"
-                  aria-label="下へ"
+                  className="grid min-h-[44px] min-w-[44px] place-items-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+                  aria-label={`質問 ${idx + 1} を下へ移動`}
                 >
                   ↓
                 </button>
                 <button
                   type="button"
                   onClick={() => removeQuestion(q.key)}
-                  className="rounded p-1 text-red-400 hover:bg-red-50"
-                  aria-label="削除"
+                  className="grid min-h-[44px] min-w-[44px] place-items-center rounded-lg text-red-700 hover:bg-red-50"
+                  aria-label={`質問 ${idx + 1} を削除`}
                 >
                   🗑
                 </button>
@@ -277,9 +358,11 @@ function EditorInner(props: Props) {
 
             <div className="space-y-3">
               <div>
-                <label className="label">質問文</label>
+                <label htmlFor={`${q.key}-text`} className="label">質問 {idx + 1} の文章</label>
                 <input
                   className="input"
+                  id={`${q.key}-text`}
+                  maxLength={500}
                   value={q.question_text}
                   onChange={(e) =>
                     patch(q.key, { question_text: e.target.value })
@@ -288,11 +371,12 @@ function EditorInner(props: Props) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="label">回答形式</label>
+                  <label htmlFor={`${q.key}-type`} className="label">回答の形式</label>
                   <select
                     className="input"
+                    id={`${q.key}-type`}
                     value={q.question_type}
                     onChange={(e) =>
                       patch(q.key, {
@@ -308,8 +392,9 @@ function EditorInner(props: Props) {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <label htmlFor={`${q.key}-required`} className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
                     <input
+                      id={`${q.key}-required`}
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300 text-brand-600"
                       checked={q.is_required}
@@ -324,11 +409,14 @@ function EditorInner(props: Props) {
 
               {questionTypeHasOptions(q.question_type) && (
                 <div>
-                  <label className="label">選択肢</label>
+                  <p className="label">選択肢（1つ以上）</p>
                   <div className="space-y-2">
                     {q.options.map((opt, oi) => (
                       <div key={oi} className="flex gap-2">
+                        <label htmlFor={`${q.key}-option-${oi}`} className="sr-only">質問 {idx + 1} の選択肢 {oi + 1}</label>
                         <input
+                          id={`${q.key}-option-${oi}`}
+                          maxLength={200}
                           className="input"
                           value={opt}
                           onChange={(e) => setOption(q.key, oi, e.target.value)}
@@ -338,7 +426,7 @@ function EditorInner(props: Props) {
                           type="button"
                           onClick={() => removeOption(q.key, oi)}
                           className="btn-ghost shrink-0 px-2 text-red-400"
-                          aria-label="選択肢を削除"
+                          aria-label={`質問 ${idx + 1} の選択肢 ${oi + 1} を削除`}
                         >
                           ✕
                         </button>
@@ -347,7 +435,8 @@ function EditorInner(props: Props) {
                     <button
                       type="button"
                       onClick={() => addOption(q.key)}
-                      className="text-sm font-medium text-brand-600"
+                      disabled={q.options.length >= 20}
+                      className="min-h-[44px] text-sm font-medium text-brand-700"
                     >
                       ＋ 選択肢を追加
                     </button>
@@ -362,29 +451,23 @@ function EditorInner(props: Props) {
       <button
         type="button"
         onClick={addQuestion}
+        disabled={questions.length >= 50}
         className="btn-secondary w-full"
       >
         ＋ 質問を追加
       </button>
 
-      {/* Sticky save bar */}
-      <div className="sticky bottom-0 -mx-4 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href={`/dashboard/bots/${props.botId}/preview`}
-            className="btn-ghost text-sm"
-          >
-            プレビューを見る →
-          </Link>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn-primary"
-            disabled={saving}
-          >
-            {saving ? "保存中..." : "保存する"}
+      </fieldset>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" onClick={() => handleSave()} className="btn-secondary" disabled={saving || !dirty}>
+            {saving ? "保存中…" : "変更を保存"}
+          </button>
+          <button type="button" onClick={() => handleSave(true)} className="btn-primary" disabled={saving || questions.length === 0}>
+            {saving ? "保存中…" : dirty ? "保存して動作確認へ →" : "動作確認へ →"}
           </button>
         </div>
+        <p className="mt-2 text-xs text-gray-500">動作確認では回答は保存されません。確認後、公開へ進めます。</p>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { safeInternalPath } from "@/lib/navigation";
 
@@ -11,48 +11,36 @@ import { safeInternalPath } from "@/lib/navigation";
 export function GoogleSignInButton({
   label = "Googleで続ける",
   next = "/dashboard",
+  disabled = false,
 }: {
   label?: string;
   next?: string;
+  disabled?: boolean;
 }) {
+  const pending = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
-    setError(null);
-    const safeNext = safeInternalPath(next);
-    setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-          safeNext
-        )}`,
-        // Let the user pick which Google account to use.
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    // On success the browser navigates away to Google, so we only handle errors.
-    if (error) {
-      setError(
-        "Googleログインを開始できませんでした。時間をおいて再度お試しください。"
-      );
-      setLoading(false);
-    }
+    if(pending.current||disabled)return;
+    pending.current=true;setError(null);setLoading(true);
+    try {
+      const {error}=await createClient().auth.signInWithOAuth({provider:"google",options:{redirectTo:`${window.location.origin}/auth/callback?next=${encodeURIComponent(safeInternalPath(next))}`,queryParams:{prompt:"select_account"}}});
+      if(error)throw error;
+    } catch {setError("Googleログインを開始できませんでした。接続を確認するか、メールアドレスでお試しください。");pending.current=false;setLoading(false);}
   }
 
   return (
     <div>
       {error && (
-        <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || disabled}
         className="btn-secondary w-full"
         aria-label={label}
       >

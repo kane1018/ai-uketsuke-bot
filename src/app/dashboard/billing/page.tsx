@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getBillingOverview } from "@/lib/billing";
+import { TrialNotice } from "@/components/TrialNotice";
 import { BillingActions } from "@/components/BillingActions";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +52,8 @@ export default async function BillingPage({
         </div>
       )}
 
-      {isLightTrial && trial.endsAt && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm leading-6 text-green-800">
-          ライトプランを30日間無料で体験中です。クレジットカード登録は不要で、
-          自動課金されません。{formatDate(trial.endsAt)}の体験終了後は自動的に
-          無料プランへ戻ります。継続する場合は、体験終了後にライトプランへ
-          お申し込みください。
-        </div>
-      )}
+      {trial.endsAt && accessSource !== "paid" && <TrialNotice endsAt={trial.endsAt} expired={!trial.active}/>}
+      {plan.monthlyResponseLimit !== null && usage.responses >= plan.monthlyResponseLimit && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-900">今月の無料枠に達しています。新しい回答の受付は停止しています。翌月を待たずに再開する場合は<Link href="/pricing" className="font-semibold underline">有料プラン</Link>をご確認ください。保存済みの回答は引き続き確認できます。</div>}
 
       {usage.bots > plan.botLimit && (
         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -76,16 +72,16 @@ export default async function BillingPage({
               {plan.name}{isLightTrial ? "（30日無料体験）" : ""}
             </p>
             <p className="mt-1 text-sm text-gray-600">
-              ステータス: {isLightTrial
+              状態: {isLightTrial
                 ? "無料体験中（カード不要・自動課金なし）"
                 : STATUS_LABELS[subscription?.status ?? "none"]}
             </p>
             {isLightTrial && trial.endsAt && (
               <p className="mt-1 text-sm text-gray-600">
-                無料体験終了日: {formatDate(trial.endsAt)}
+                無料体験終了日時: {formatDate(trial.endsAt)}
               </p>
             )}
-            {subscription?.current_period_end && (
+            {accessSource === "paid" && subscription?.current_period_end && (
               <p className="mt-1 text-sm text-gray-600">
                 {subscription.cancel_at_period_end ? "利用終了日" : "次回更新日"}: {formatDate(subscription.current_period_end)}
               </p>
@@ -97,6 +93,7 @@ export default async function BillingPage({
 
       <section>
         <h2 className="mb-3 font-semibold">今月の利用状況</h2>
+        <p className="mb-3 text-xs leading-6 text-slate-500">回答数は日本時間の暦月で集計します。無料体験中や有料プラン中に受け取った同じ月の回答も含みます。</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <UsageCard label="Bot数" used={usage.bots} limit={plan.botLimit} />
           <UsageCard label="月間回答数" used={usage.responses} limit={plan.monthlyResponseLimit} />
@@ -137,7 +134,7 @@ function UsageCard({ label, used, limit }: { label: string; used: number; limit:
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeZone: "Asia/Tokyo" }).format(
+  return new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(
     new Date(value)
   );
 }

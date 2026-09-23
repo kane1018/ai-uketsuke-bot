@@ -1,0 +1,1 @@
+export default function Loading(){return <div role="status" className="space-y-5 py-5"><p className="text-sm text-slate-600">画面を読み込んでいます…</p><div aria-hidden="true" className="h-40 rounded-xl bg-slate-100 motion-safe:animate-pulse"/></div>;}

@@ -5,6 +5,7 @@ import type { BotQuestion } from "@/lib/types";
 import { getEffectivePlan } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "お問い合わせ受付", robots: { index: false, follow: false } };
 
 // Public chat page. RLS only returns the bot if it is published.
 export default async function PublicChatPage({
@@ -38,8 +39,8 @@ export default async function PublicChatPage({
   const { plan } = await getEffectivePlan(bot.user_id);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-0 sm:p-6">
-      <div className="h-screen w-full overflow-hidden bg-white shadow-xl sm:h-[640px] sm:max-w-md sm:rounded-2xl">
+    <div id="main-content" className="flex min-h-dvh items-center justify-center bg-gray-100 p-0 sm:p-6">
+      <div id="main-content" className="h-dvh w-full overflow-hidden bg-white shadow-xl sm:h-[640px] sm:max-w-md sm:rounded-2xl">
         <ChatForm
           slug={bot.public_slug}
           botName={bot.name}

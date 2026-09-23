@@ -35,3 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 .env*
 !.env.example
+
+.chatgpt/
+
+.sol-codex/

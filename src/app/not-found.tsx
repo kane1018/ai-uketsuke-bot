@@ -1,16 +1,2 @@
 import Link from "next/link";
-
-export default function NotFound() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 text-center">
-      <p className="text-5xl">🔍</p>
-      <h1 className="mt-4 text-xl font-bold">ページが見つかりません</h1>
-      <p className="mt-2 text-sm text-gray-500">
-        お探しのページは存在しないか、公開されていない可能性があります。
-      </p>
-      <Link href="/" className="btn-primary mt-6">
-        トップへ戻る
-      </Link>
-    </div>
-  );
-}
+export default function NotFound(){return <main id="main-content" className="mx-auto max-w-xl px-5 py-20"><p className="eyebrow">404 / ページが見つかりません</p><h1 className="mt-4 text-2xl font-bold">URLをご確認ください</h1><p className="mt-4 leading-7 text-slate-600">公開されていない受付フォーム、または移動・削除されたページの可能性があります。受付フォームの場合は、案内元の事業者にお問い合わせください。</p><div className="mt-6 flex gap-3"><Link href="/" className="btn-primary">サービスのホーム</Link><Link href="/dashboard" className="btn-secondary">管理画面</Link></div></main>;}

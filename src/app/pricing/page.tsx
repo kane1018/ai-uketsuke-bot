@@ -3,153 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { getEffectivePlan } from "@/lib/billing";
 import { PLAN_ORDER, PLANS, type PlanId } from "@/lib/plans";
 import { PricingAction } from "@/components/PricingAction";
-import { LegalFooter } from "@/components/LegalFooter";
-
-export const dynamic = "force-dynamic";
-
-export default async function PricingPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ canceled?: string }>;
-}) {
-  const { canceled } = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  let currentPlan: PlanId = "free";
-  let trialActive = false;
-  let trialEndsAt: string | null = null;
-  if (user) {
-    const effective = await getEffectivePlan(user.id);
-    currentPlan = effective.planId;
-    trialActive = effective.accessSource === "light_trial";
-    trialEndsAt = effective.trial.endsAt;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-lg font-bold text-brand-700">
-            受付Bot
-          </Link>
-          <div className="flex gap-2">
-            {user ? (
-              <Link href="/dashboard/billing" className="btn-secondary">
-                請求管理
-              </Link>
-            ) : (
-              <Link href="/login" className="btn-ghost">
-                ログイン
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold sm:text-4xl">シンプルな月額プラン</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-gray-600">
-            新規登録から30日間、ライトプランの機能を無料でお試しいただけます。
-          </p>
-          <p className="mx-auto mt-2 max-w-3xl text-sm font-semibold text-brand-700">
-            クレジットカード登録不要・自動課金なし。30日後は自動で無料プランに戻ります。
-          </p>
-          {trialActive && trialEndsAt && (
-            <p className="mx-auto mt-2 max-w-3xl text-sm text-green-700">
-              現在ライトプラン無料体験中です。無料体験終了日：{formatDate(trialEndsAt)}
-            </p>
-          )}
-          <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-gray-600">
-            有料プランは1か月単位で、解約するまで1か月ごとに自動更新されます。
-            表示価格が実際の支払総額で、これに消費税等を別途加算しません。
-            有料プランは月間回答数を制限しません。次回更新日前までに請求管理画面から解約でき、解約手数料はありません。
-          </p>
-        </div>
-
-        {canceled === "true" && (
-          <div className="mx-auto mt-6 max-w-xl rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            お申し込みはキャンセルされました。プランは変更されていません。
-          </div>
-        )}
-
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {PLAN_ORDER.map((id) => {
-            const plan = PLANS[id];
-            const highlighted = id === "standard";
-            return (
-              <section
-                key={id}
-                className={`card relative flex flex-col p-6 ${
-                  highlighted ? "border-brand-500 ring-2 ring-brand-100" : ""
-                }`}
-              >
-                {highlighted && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
-                    おすすめ
-                  </span>
-                )}
-                <h2 className="text-xl font-bold">{plan.name}</h2>
-                <p className="mt-3 text-3xl font-bold">
-                  {plan.price.toLocaleString()}円
-                  <span className="text-sm font-normal text-gray-500">/月</span>
-                </p>
-                {plan.price > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    12か月継続した場合の支払総額の目安：
-                    {(plan.price * 12).toLocaleString()}円
-                  </p>
-                )}
-                <dl className="mt-5 space-y-2 text-sm">
-                  <Limit label="Bot数" value={`${plan.botLimit}個`} />
-                  <Limit
-                    label="月間回答数"
-                    value={plan.monthlyResponseLimit === null ? "無制限" : `${plan.monthlyResponseLimit.toLocaleString()}件`}
-                  />
-                </dl>
-                <ul className="my-6 flex-1 space-y-2 text-sm text-gray-600">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>✓ {feature}</li>
-                  ))}
-                </ul>
-                <PricingAction
-                  plan={id}
-                  loggedIn={Boolean(user)}
-                  isCurrent={currentPlan === id}
-                  isTrialCurrent={trialActive && id === "light"}
-                />
-              </section>
-            );
-          })}
-        </div>
-        <p className="mx-auto mt-8 max-w-3xl text-center text-xs leading-6 text-gray-500">
-          有料プランへ申し込む前に、
-          <Link href="/terms" className="text-brand-700 underline">利用規約</Link>、
-          <Link href="/privacy" className="text-brand-700 underline">プライバシーポリシー</Link>、
-          <Link href="/legal" className="text-brand-700 underline">特定商取引法に基づく表記</Link>、
-          <Link href="/refund-policy" className="text-brand-700 underline">解約・返金ポリシー</Link>
-          をご確認ください。
-        </p>
-      </main>
-      <LegalFooter />
-    </div>
-  );
+import { MarketingShell } from "@/components/MarketingShell";
+import { pageMetadata } from "@/lib/site";
+import { signupPath } from "@/lib/use-cases";
+export const dynamic="force-dynamic";
+export const metadata=pageMetadata("料金プラン｜30日無料・月980円から", "受付Botはライトプラン30日無料。クレジットカード登録不要・自動課金なし。体験後は無料プランへ。ライト980円、スタンダード1,980円、プロ3,980円で回答数無制限。", "/pricing");
+const WHO:Record<PlanId,string>={free:"まずは公開URLで、小さく続ける",light:"1つの受付を、サイトにも設置",standard:"相談・問い合わせなど窓口を分ける",pro:"複数の窓口・サービスをまとめて"};
+export default async function PricingPage({searchParams}:{searchParams:Promise<{canceled?:string}>}){
+  const {canceled}=await searchParams;const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();
+  const effective=user?await getEffectivePlan(user.id):null;const currentPlan=effective?.planId??"free";const trialActive=effective?.accessSource==="light_trial";
+  return <MarketingShell><section className="section-wrap"><div className="section-heading mx-auto text-center"><p className="eyebrow">始めやすく、続けやすく</p><h1>まずは30日、ライトを無料で。</h1><p>クレジットカード登録不要・自動課金なし。<br/>有料契約をしなければ、30日後は無料プランへ戻ります。</p></div>
+    <div className="mb-9 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-brand-200 bg-brand-50 p-5 sm:p-6"><div><p className="font-bold text-brand-900">{trialActive?"現在、ライト無料体験中です":user?`現在のプラン：${PLANS[currentPlan].name}`:"30日間は、回答数無制限・ホームページへの埋め込みも無料"}</p><p className="mt-2 text-sm leading-6 text-slate-600">{trialActive&&effective?.trial.endsAt?`終了日時：${formatDate(effective.trial.endsAt)}。有料継続は終了後にご自身でお申し込みください。`:"無料体験終了だけではBotや保存した回答は削除しません。"}</p></div><Link href={user?"/dashboard":signupPath()} className="btn-primary">{user?"受付の管理画面へ":"30日無料で始める →"}</Link></div>
+    {canceled==="true"&&<p role="status" className="mb-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-900">決済手続きをキャンセルしました。現在のプランは変更されていません。</p>}
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">{PLAN_ORDER.map((id)=>{const plan=PLANS[id];return <section key={id} className={`relative flex flex-col rounded-2xl border bg-white p-5 sm:p-6 ${id==="light"?"border-brand-400 shadow-md shadow-brand-100/40":"border-slate-200"}`}>{id==="light"&&<span className="mb-3 w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800">ひとつの受付に</span>}<h2 className="text-xl font-bold">{plan.name}</h2><p className="mt-2 min-h-[40px] text-xs leading-6 text-slate-500">{WHO[id]}</p><p className="mt-4 text-3xl font-bold tracking-tight">{plan.price.toLocaleString()}<span className="ml-1 text-sm font-normal text-slate-600">円/月</span></p><p className="mt-1 text-xs text-slate-500">{plan.price?"表示価格が支払総額・初期費用なし":"無料体験終了後も利用できます"}</p><dl className="mt-5 space-y-3 text-sm"><div className="flex justify-between gap-2"><dt className="text-slate-600">作れるBot</dt><dd className="font-semibold">{plan.botLimit}個</dd></div><div className="flex justify-between gap-2"><dt className="text-slate-600">月間の回答数</dt><dd className="font-semibold">{plan.monthlyResponseLimit===null?"無制限":`${plan.monthlyResponseLimit}件`}</dd></div></dl><ul className="my-6 flex-1 space-y-3 text-sm text-slate-600"><li>✓ 公開URLで受付</li><li>✓ 回答保存・メール通知</li><li>{plan.iframeEnabled?"✓ ホームページに埋め込み":"— ホームページ埋め込みなし"}</li><li>{plan.brandingVisible?"受付Botのロゴが表示されます":"✓ 受付Botのロゴを非表示"}</li></ul><PricingAction plan={id} loggedIn={Boolean(user)} isCurrent={Boolean(user)&&currentPlan===id} isTrialCurrent={trialActive&&id==="light"} trialActive={trialActive}/>{plan.price>0&&<p className="mt-4 text-xs leading-6 text-slate-500">12か月継続時の目安：{(plan.price*12).toLocaleString()}円</p>}</section>;})}</div>
+    <div className="mt-9 grid gap-7 md:grid-cols-2"><section className="rounded-xl bg-slate-50 p-5"><h2 className="font-semibold">有料プランの契約について</h2><p className="mt-3 text-sm leading-7 text-slate-600">有料プランは申込時に初回決済し、解約まで1か月ごとに自動更新されます。次回更新日前までに請求管理から解約でき、解約手数料はありません。利用者都合の支払済み料金の返金・日割りは原則ありません。表示価格に消費税等を別途加算しません。</p><p className="mt-3 text-sm leading-7 text-slate-600">無料体験中にスタンダード・プロを選ぶ場合は、申込時から有料です。ライトの有料継続は体験終了後にお申し込みください。</p></section><section className="rounded-xl bg-slate-50 p-5"><h2 className="font-semibold">無料プランに戻ったとき</h2><p className="mt-3 text-sm leading-7 text-slate-600">公開URLと保存済みの回答は残ります。埋め込みは停止し、受付は月30回答までです。日本時間の暦月で集計し、体験中に受けた同じ月の回答も含みます。既に上限に達している場合、その月の新規受付は停止します。</p><Link className="mt-3 inline-block text-sm text-brand-700 underline" href="/guide#trial">終了後の詳しい使い方 →</Link></section></div>
+    <p className="mt-6 text-xs leading-7 text-slate-500">回答件数による従量課金・超過課金はありません。不正利用や過度な連続送信を防ぐレート制限は別途適用されます。</p>
+    <p className="mt-5 text-sm leading-7 text-slate-600">申込前に<Link href="/terms" className="text-brand-700 underline">利用規約</Link>・<Link href="/privacy" className="text-brand-700 underline">プライバシーポリシー</Link>・<Link href="/legal" className="text-brand-700 underline">特定商取引法に基づく表記</Link>・<Link href="/refund-policy" className="text-brand-700 underline">解約・返金ポリシー</Link>をご確認ください。</p>
+  </section></MarketingShell>;
 }
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "medium",
-    timeZone: "Asia/Tokyo",
-  }).format(new Date(value));
-}
-
-function Limit({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-3 border-b border-gray-100 pb-2">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="font-semibold">{value}</dd>
-    </div>
-  );
-}
+function formatDate(value:string){return new Intl.DateTimeFormat("ja-JP",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Tokyo"}).format(new Date(value))+"（日本時間）";}

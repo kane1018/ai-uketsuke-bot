@@ -1,0 +1,4 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+export function DashboardNav(){const path=usePathname();return <nav aria-label="管理メニュー" className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 sm:px-4">{[["/dashboard","ホーム"],["/dashboard/bots","受付Bot一覧"],["/dashboard/billing","プラン・請求"]].map(([href,label])=>{const active=href==="/dashboard"?path===href:path.startsWith(href);return <Link key={href} href={href} aria-current={active?"page":undefined} className={`min-h-[44px] whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold ${active?"border-brand-700 text-brand-700":"border-transparent text-slate-600 hover:text-brand-700"}`}>{label}</Link>;})}<Link href="/guide" className="ml-auto whitespace-nowrap px-3 py-3 text-sm text-slate-500">使い方</Link></nav>;}

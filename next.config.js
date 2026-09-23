@@ -12,6 +12,7 @@ const nextConfig = {
     ];
 
     return [
+      ...["/dashboard/:path*", "/login", "/signup", "/forgot-password", "/reset-password", "/auth/:path*", "/b/:path*", "/embed/:path*"].map((source) => ({source, headers:[{key:"X-Robots-Tag",value:"noindex, nofollow"}]})),
       {
         source: "/:path*",
         headers: baseline,

@@ -2,62 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LegalFooter } from "@/components/LegalFooter";
-
-export const dynamic = "force-dynamic";
-
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="text-lg font-bold text-brand-700">
-            受付Bot
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-gray-500 sm:inline">
-              {user.email}
-            </span>
-            <form action="/auth/signout" method="post">
-              <button type="submit" className="btn-ghost text-sm">
-                ログアウト
-              </button>
-            </form>
-          </div>
-        </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 px-2">
-          <Link
-            href="/dashboard"
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand-700"
-          >
-            ダッシュボード
-          </Link>
-          <Link
-            href="/dashboard/bots"
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand-700"
-          >
-            Bot一覧
-          </Link>
-          <Link
-            href="/dashboard/billing"
-            className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand-700"
-          >
-            プラン・請求
-          </Link>
-        </nav>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
-      <LegalFooter />
-    </div>
-  );
+import { DashboardNav } from "@/components/DashboardNav";
+export const dynamic="force-dynamic";
+export const metadata={title:"受付の管理",robots:{index:false,follow:false}};
+export default async function DashboardLayout({children}:{children:React.ReactNode}){
+ const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)redirect("/login");
+ return <div className="min-h-screen bg-slate-50"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6"><Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-slate-900"><span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-700 text-sm text-white" aria-hidden="true">受</span>受付Bot</Link><div className="flex min-w-0 items-center gap-3"><span className="hidden max-w-[220px] truncate text-xs text-slate-500 sm:block">{user.email}</span><form action="/auth/signout" method="post"><button className="btn-ghost" type="submit">ログアウト</button></form></div></div><DashboardNav/></header><main id="main-content" className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">{children}</main><LegalFooter/></div>;
 }

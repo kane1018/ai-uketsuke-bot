@@ -9,14 +9,16 @@ export const dynamic = "force-dynamic";
 export default async function BotsListPage() {
   const supabase = await createClient();
 
-  const { data: bots } = await supabase
+  const { data: bots, error } = await supabase
     .from("bots")
     .select("id, name, purpose, industry, status, created_at")
     .order("created_at", { ascending: false });
 
+  if (error) throw new Error("受付Bot一覧を読み込めませんでした");
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold">Bot一覧</h1>
         <Link href="/dashboard/bots/new" className="btn-primary">
           ＋ 新しいBot
@@ -57,7 +59,7 @@ export default async function BotsListPage() {
           <p className="mt-3 text-sm text-gray-500">
             まだBotがありません。
             <br />
-            目的を選ぶだけで、5分でBotが作れます。
+            テンプレートを選び、質問を確認して公開できます。
           </p>
           <Link href="/dashboard/bots/new" className="btn-primary mt-5">
             ＋ 最初のBotを作る

@@ -14,10 +14,10 @@ body {
 /* Reusable UI primitives ------------------------------------------------ */
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center min-h-[44px] gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    @apply btn bg-brand-700 text-white hover:bg-brand-800 focus:ring-brand-500;
   }
   .btn-secondary {
     @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-brand-500;
@@ -30,7 +30,7 @@ body {
   }
 
   .input {
-    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base shadow-sm placeholder:text-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-gray-700;
@@ -52,4 +52,25 @@ body {
 }
 .chat-scroll::-webkit-scrollbar-thumb {
   @apply rounded-full bg-gray-300;
+}
+
+@layer base {
+  :focus-visible { outline: 2px solid #144ae1; outline-offset: 3px; }
+  html { scroll-padding-top: 1.5rem; }
+  body { overflow-wrap: break-word; }
+  button, input, select, textarea { touch-action: manipulation; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+}
+@layer components {
+  .section-wrap { @apply mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16; }
+  .section-heading { @apply mb-8 max-w-3xl; }
+  .section-heading h1 { @apply mt-4 text-3xl font-bold leading-relaxed tracking-tight text-slate-900 sm:text-4xl; }
+  .section-heading h2 { @apply mt-4 text-2xl font-bold leading-relaxed tracking-tight text-slate-900 sm:text-3xl; }
+  .section-heading > p:not(.eyebrow) { @apply mt-4 leading-8 text-slate-600; }
+  .eyebrow { @apply text-xs font-bold tracking-widest text-brand-700; }
+  .chat-example { @apply w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-700; }
+  .skip-link { @apply fixed left-3 top-3 z-[100] -translate-y-24 rounded-lg bg-slate-900 px-4 py-3 text-white focus:translate-y-0; }
+  .demo-frame { height: 700px; max-height: 85dvh; min-height: 460px; }
 }

@@ -9,14 +9,15 @@ export function BotTabs({ botId }: { botId: string }) {
 
   const tabs = [
     { href: base, label: "概要" },
-    { href: `${base}/edit`, label: "質問編集" },
-    { href: `${base}/preview`, label: "プレビュー" },
-    { href: `${base}/publish`, label: "公開設定" },
-    { href: `${base}/responses`, label: "回答ログ" },
+    { href: `${base}/settings`, label: "基本情報" },
+    { href: `${base}/edit`, label: "質問を編集" },
+    { href: `${base}/preview`, label: "動作確認" },
+    { href: `${base}/publish`, label: "公開・設置" },
+    { href: `${base}/responses`, label: "届いた回答" },
   ];
 
   return (
-    <nav className="-mb-px flex gap-1 overflow-x-auto border-b border-gray-200">
+    <nav aria-label="受付Botの管理" className="-mb-px flex max-w-full gap-1 overflow-x-auto border-b border-gray-200">
       {tabs.map((t) => {
         const active =
           t.href === base
@@ -26,6 +27,7 @@ export function BotTabs({ botId }: { botId: string }) {
           <Link
             key={t.href}
             href={t.href}
+            aria-current={active ? "page" : undefined}
             className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium ${
               active
                 ? "border-brand-600 text-brand-700"

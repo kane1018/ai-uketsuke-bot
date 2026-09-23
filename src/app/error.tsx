@@ -1,0 +1,3 @@
+"use client";
+import Link from "next/link";
+export default function ErrorPage({reset}:{error:Error & {digest?:string};reset:()=>void}) { return <main id="main-content" className="mx-auto max-w-xl px-5 py-20"><p className="eyebrow">読み込みエラー</p><h1 className="mt-4 text-2xl font-bold">画面を読み込めませんでした</h1><p className="mt-4 leading-7 text-slate-600">通信や一時的な問題が考えられます。接続を確認して、もう一度お試しください。保存済みの内容は、この表示だけで削除されることはありません。</p><div className="mt-6 flex flex-wrap gap-3"><button className="btn-primary" onClick={reset}>もう一度読み込む</button><Link className="btn-secondary" href="/dashboard">管理画面に戻る</Link></div><Link className="mt-6 inline-block text-sm text-brand-700 underline" href="/guide#help">困ったときのガイド</Link></main>; }

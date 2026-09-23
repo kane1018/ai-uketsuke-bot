@@ -5,9 +5,8 @@ import {
   LIGHT_TRIAL_DAYS,
   PLANS,
   getLightTrialEndsAt,
-  hasPaidAccess,
   isLightTrialActive,
-  isPlanId,
+  resolvePlanAccess,
   type PlanId,
   type SubscriptionStatus,
 } from "@/lib/plans";
@@ -70,15 +69,9 @@ export async function getSubscription(userId: string, stripeMode = getStripeMode
 
 export async function getLightTrial(userId: string): Promise<LightTrialRecord> {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("profiles")
-    .select("created_at")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) throw new Error(`Failed to load light trial: ${error.message}`);
-
-  const startedAt = data?.created_at ?? null;
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error) throw new Error(`Failed to load trial registration: ${error.message}`);
+  const startedAt = data.user?.created_at ?? null;
   const endsAt = getLightTrialEndsAt(startedAt);
   return {
     startedAt,
@@ -93,18 +86,9 @@ export async function getEffectivePlan(userId: string) {
     getSubscription(userId),
     getLightTrial(userId),
   ]);
-  const storedPlan = subscription?.plan;
-  const status = subscription?.status ?? "none";
-  const paidPlanId: PlanId | null =
-    storedPlan && isPlanId(storedPlan) && storedPlan !== "free" && hasPaidAccess(status)
-      ? storedPlan
-      : null;
-  const accessSource: PlanAccessSource = paidPlanId
-    ? "paid"
-    : trial.active
-      ? "light_trial"
-      : "free";
-  const planId: PlanId = paidPlanId ?? (trial.active ? "light" : "free");
+  const { planId, accessSource } = resolvePlanAccess(
+    subscription?.plan, subscription?.status ?? "none", trial.active
+  );
 
   return { planId, plan: PLANS[planId], subscription, trial, accessSource };
 }

@@ -5,6 +5,7 @@ import type { BotQuestion } from "@/lib/types";
 import { getEffectivePlan } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "お問い合わせ受付", robots: { index: false, follow: false } };
 
 // iframe embed view: chat only, no header / nav / page chrome.
 export default async function EmbedChatPage({
@@ -38,14 +39,14 @@ export default async function EmbedChatPage({
 
   if (!plan.iframeEnabled) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 p-6 text-center text-sm text-gray-600">
+      <div className="flex h-dvh items-center justify-center bg-gray-50 p-6 text-center text-sm text-gray-600">
         このBotの埋め込み表示は現在利用できません。
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-white">
+    <div id="main-content" className="h-dvh w-full overflow-hidden bg-white">
       <ChatForm
         slug={bot.public_slug}
         botName={bot.name}

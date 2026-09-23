@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           <li>Supabase：認証、データベース、関連するバックエンド機能</li>
           <li>Stripe：決済、請求、Customer Portal</li>
           <li>Resend：メール通知</li>
-          <li>Vercel：アプリケーションのホスティング、配信、ログ管理</li>
+          <li>Vercel：アプリケーションのホスティング、配信、アクセス解析、パフォーマンス計測、ログ管理</li>
         </ul>
         <p className="mt-3">
           これらの外部サービスの提供者またはデータの保存・処理環境が日本国外に所在する場合があります。
@@ -99,10 +99,20 @@ export default function PrivacyPage() {
       </section>
 
       <section>
-        <h2>6. Cookie等</h2>
+        <h2>6. Cookie・アクセス解析等</h2>
         <p className="mt-3">
           ログイン状態の維持、セキュリティ、基本機能の提供のためCookieまたは同様の技術を使用します。
           ブラウザでCookieを無効にすると、一部機能を利用できない場合があります。
+        </p>
+        <p className="mt-3">
+          サービス改善のため、トップページ、料金、体験デモ、業種別の活用例、使い方ガイド等の
+          公開案内ページでVercel Web AnalyticsおよびSpeed Insightsを利用し、
+          ページの閲覧状況、参照元、端末・ブラウザの種類、地域の概況、
+          表示速度その他のパフォーマンス情報を集計します。
+          Web AnalyticsはCookieによるサイト横断トラッキングを行わない方式です。
+          管理画面および公開Bot・埋め込みBotの回答画面は、このアクセス解析の計測対象から除外します。
+          公開Botに入力された氏名、連絡先、自由記述等の回答本文を、
+          これらのアクセス解析のカスタムイベントとして送信しません。
         </p>
       </section>
 

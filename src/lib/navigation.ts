@@ -22,3 +22,10 @@ export function safeInternalPath(
     return fallback;
   }
 }
+
+// Do not redirect an authenticated visitor back into a login/callback loop.
+export function authDestination(value: string | null | undefined, fallback = "/dashboard") {
+  const path = safeInternalPath(value, fallback);
+  const pathname = path.split(/[?#]/)[0];
+  return ["/login", "/signup", "/register"].includes(pathname) || pathname.startsWith("/auth/") || pathname.startsWith("/api/") ? fallback : path;
+}
